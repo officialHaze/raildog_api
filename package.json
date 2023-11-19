@@ -1,0 +1,19 @@
+{
+  "name": "raildog",
+  "version": "0.0.1",
+  "description": "Indian Railway info provider",
+  "main": "main.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "npm run build && node ./build/main.js"
+  },
+  "author": "Moinak-Dey",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^21.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.2"
+  }
+}
