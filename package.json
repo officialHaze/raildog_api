@@ -11,9 +11,12 @@
   "author": "Moinak-Dey",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
     "puppeteer": "^21.5.2"
   },
   "devDependencies": {
+    "@types/axios": "^0.14.0",
     "@types/node": "^20.9.2"
   }
 }
