@@ -92,13 +92,6 @@ export default class Scrapper {
     });
   }
 
-  public async bypassCaptcha({ captchaCode, captchaOptions, sD }: CaptchaBypassOption) {
-    const correctOption: CaptchaOption = captchaOptions.filter((option, idx) => {
-      return option.captchaCode === captchaCode;
-    })[0];
-    console.log(correctOption);
-  }
-
   // LSP --> Live Status Page
   public async scrapTrainLSP({ method }: ScrapMethod) {
     try {
@@ -168,7 +161,7 @@ export default class Scrapper {
             // Extract the value of sD, required to create the sR(captcha-text)
             const sD = this.extractSDVal(data.sscript);
 
-            return sD;
+            return [sD, phpsessid];
           }
           // parse the html and extract neccessary info
           return data;
