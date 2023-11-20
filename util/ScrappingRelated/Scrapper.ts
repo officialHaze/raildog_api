@@ -6,6 +6,7 @@ import * as ch from "cheerio";
 import { Stream } from "stream";
 import fs from "fs";
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
+import FindTrainArgs from "../Interfaces/FindTrainArgs";
 
 export default class Scrapper {
   browser: Browser | null = null;
@@ -93,7 +94,12 @@ export default class Scrapper {
   }
 
   // LSP --> Live Status Page
-  public async scrapTrainLSP({ method }: ScrapMethod) {
+  public async scrapLiveStatus({
+    method,
+    phpsessid,
+  }: ScrapMethod): Promise<
+    [sD: string | null, phpsessid: string | null, options: CaptchaOption[] | null, data: any | null]
+  > {
     try {
       switch (method) {
         case 0:
@@ -103,7 +109,7 @@ export default class Scrapper {
           if (!page) throw new Error("No page open in browser!").message;
 
           await page.goto("https://etrain.info/train/Sdah-Bnj-Local-33813/live");
-          return page.content();
+          return [null, null, null, page.content()];
 
         case 1:
           console.log("Pinging the etrain.info live status url...");
@@ -112,7 +118,7 @@ export default class Scrapper {
             {
               train: "33813",
               atstn: "SDAH",
-              date: "19-11-2023",
+              date: "21-11-2023",
               reqID: 1,
               reqCount: 1,
               final: 1,
@@ -122,10 +128,12 @@ export default class Scrapper {
                 Origin: "https://etrain.info",
                 Referer: "https://etrain.info/train/Sdah-Bnj-Local-33813/live",
                 "Content-Type": "application/x-www-form-urlencoded",
+                Cookie: phpsessid,
               },
             }
           );
-          if (data.sscript) {
+          console.log(data);
+          if (!data.data && data.sscript) {
             console.log(data.sscript);
             console.log("Captcha verification flow identified!");
             const rawHeads: string[] = request.res.rawHeaders;
@@ -161,14 +169,36 @@ export default class Scrapper {
             // Extract the value of sD, required to create the sR(captcha-text)
             const sD = this.extractSDVal(data.sscript);
 
-            return [sD, phpsessid];
+            return [sD, phpsessid, options, null];
           }
           // parse the html and extract neccessary info
-          return data;
+          console.log(data.data);
+          return [null, null, null, data.data];
 
         default:
           throw new Error("No scrap method found").message;
       }
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  public async scrapAvailableTrains({ startStation, stopStation, travelDate }: FindTrainArgs) {
+    try {
+      const param = `${startStation} to ${stopStation}`;
+      const query = `date=${travelDate}`;
+
+      const formattedParam = param.replace(/ /g, "-") + `?${query}`;
+      console.log(formattedParam);
+
+      const crawlBaseUrl = process.env.CRAWL_BASE_URL;
+      console.log("CRAWL BASE URL: " + crawlBaseUrl);
+
+      if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!");
+
+      const crawlUrl = `${crawlBaseUrl}/trains/${formattedParam}`;
+      console.log("URL to crawl to scrap available trains: " + crawlUrl);
     } catch (err) {
       console.error(err);
       throw err;

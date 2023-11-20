@@ -1,9 +1,8 @@
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
+import axiosInstance from "../axios.config";
 
 export default class AntiCaptcha {
   private getCaptchaText(sD: string, sK: string) {
-    console.log(sD, sK);
-
     function ord(string: string) {
       var str = string + "";
       var code = str.charCodeAt(0);
@@ -19,7 +18,6 @@ export default class AntiCaptcha {
       return code;
     }
 
-    // Rest of the code...
     var sR = "",
       //   sD = options.sD,
       digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._";
@@ -63,10 +61,37 @@ export default class AntiCaptcha {
   }
 
   public async bypassCaptcha({ captchaCode, captchaOptions, sD, phpsessid }: CaptchaBypassOption) {
-    const correctOption: CaptchaOption = captchaOptions.filter((option, idx) => {
-      return option.captchaCode === captchaCode;
-    })[0];
-    console.log(correctOption, sD, phpsessid);
-    const sR = this.getCaptchaText(sD, correctOption.captchaCodeIdx.toString());
+    try {
+      const correctOption: CaptchaOption = captchaOptions.filter((option, idx) => {
+        return option.captchaCode === captchaCode;
+      })[0];
+      console.log(correctOption, sD, phpsessid);
+      const sR = this.getCaptchaText(sD, correctOption.captchaCodeIdx.toString());
+
+      // Submit the captcha
+      console.log("Submitting captcha...");
+      const { data } = await axiosInstance.post(
+        "/ajax.php?q=captcha&v=3.4.9",
+        {
+          "captcha-code": captchaCode,
+          reqID: 1,
+          reqCount: 1,
+          "captcha-text": sR,
+        },
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Origin: "https://etrain.info",
+            Referer: "https://etrain.info/train/Sdah-Bnj-Local-33813/live",
+            Cookie: phpsessid,
+          },
+        }
+      );
+      console.log("Response after submitting the captcha: ");
+      console.log(data);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
   }
 }
