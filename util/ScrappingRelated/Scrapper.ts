@@ -195,7 +195,7 @@ export default class Scrapper {
       const crawlBaseUrl = process.env.CRAWL_BASE_URL;
       console.log("CRAWL BASE URL: " + crawlBaseUrl);
 
-      if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!");
+      if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!").message;
 
       const crawlUrl = `${crawlBaseUrl}/trains/${formattedParam}`;
       console.log("URL to crawl to scrap available trains: " + crawlUrl);

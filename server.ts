@@ -3,11 +3,15 @@ import FindTrainArgs from "./util/Interfaces/FindTrainArgs";
 import AntiCaptcha from "./util/ScrappingRelated/AntiCaptcha";
 import Scrapper from "./util/ScrappingRelated/Scrapper";
 import express, { Request, Response } from "express";
+import dotenv from "dotenv";
 
 class RailDog {
   private static server = express();
   private static PORT = 5050;
+
   public static main(args?: string[]): void {
+    dotenv.config();
+
     this.server.use(express.urlencoded({ extended: true }));
     this.server.use(express.json());
 
@@ -62,7 +66,7 @@ class RailDog {
       console.log(body);
 
       const scrapper = new Scrapper();
-      scrapper.scrapAvailableTrains(body);
+      await scrapper.scrapAvailableTrains(body);
       res.status(200).json({ message: "success!" });
     } catch (err) {
       res.status(500).json({ Error: err });
