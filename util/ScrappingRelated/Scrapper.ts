@@ -7,6 +7,9 @@ import { Stream } from "stream";
 import fs from "fs";
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
 import FindTrainArgs from "../Interfaces/FindTrainArgs";
+import Serializer from "../SerializationRelated/Serializer";
+import Constants from "../Constants";
+import { SerializedAvailableTrainsData } from "../Interfaces/SerializedData";
 
 export default class Scrapper {
   browser: Browser | null = null;
@@ -189,16 +192,45 @@ export default class Scrapper {
       const param = `${startStation} to ${stopStation}`;
       const query = `date=${travelDate}`;
 
-      const formattedParam = param.replace(/ /g, "-") + `?${query}`;
+      const formattedParam = param.replace(/ /g, "-") + `/?${query}`;
       console.log(formattedParam);
 
-      const crawlBaseUrl = process.env.CRAWL_BASE_URL;
-      console.log("CRAWL BASE URL: " + crawlBaseUrl);
+      // const crawlBaseUrl = process.env.CRAWL_BASE_URL;
+      // console.log("CRAWL BASE URL: " + crawlBaseUrl);
 
-      if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!").message;
+      // if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!").message;
 
-      const crawlUrl = `${crawlBaseUrl}/trains/${formattedParam}`;
+      const crawlUrl = `/trains/${formattedParam}`;
       console.log("URL to crawl to scrap available trains: " + crawlUrl);
+
+      // Crawl the url
+      const { data: html } = await axiosInstance.get(crawlUrl);
+      console.log("Crawled data(HTML): ", html);
+
+      // Extract the table containing train list
+      const $ = ch.load(html);
+      const trainlist = $(".trainlist > table > tbody > tr");
+      const trainlistLength = trainlist.length;
+      console.log("Train list: ", trainlist);
+
+      const jsonData: SerializedAvailableTrainsData[] = [];
+
+      // Serialize the data
+      for (let i = 0; i < trainlistLength; i++) {
+        const children = trainlist[i].children;
+        // Serialize
+        const serialzier = new Serializer();
+        const data = serialzier.serialize({
+          serializeInto: Constants.AVAILABLE_TRAINS,
+          extractedElems: children,
+          ch: $,
+        });
+        data && jsonData.push(data);
+        // children.forEach(childNode => {
+        //   console.log($(childNode).text());
+        // });
+      }
+      console.log("JSON data: ", jsonData);
     } catch (err) {
       console.error(err);
       throw err;
