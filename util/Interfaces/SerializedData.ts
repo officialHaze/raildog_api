@@ -1,12 +1,13 @@
 export interface SerializedAvailableTrainsData {
-  trainNum: number;
-  trainName: string;
-  sourceStn: string;
-  departTime: string;
-  destStn: string;
-  arrivalTime: string;
-  elapsedTime: string;
-  runningDays: {
+  id: string;
+  train_no: number;
+  train_name: string;
+  source_stn: string;
+  depart_time: string;
+  dest_stn: string;
+  arrival_time: string;
+  elapsed_time: string;
+  running_days: {
     sun: boolean;
     mon: boolean;
     tue: boolean;
@@ -15,5 +16,5 @@ export interface SerializedAvailableTrainsData {
     fri: boolean;
     sat: boolean;
   };
-  classAvailable: string;
+  classes_available: string;
 }

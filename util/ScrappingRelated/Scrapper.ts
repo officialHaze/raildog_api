@@ -128,8 +128,8 @@ export default class Scrapper {
             },
             {
               headers: {
-                Origin: "https://etrain.info",
-                Referer: "https://etrain.info/train/Sdah-Bnj-Local-33813/live",
+                Origin: process.env.CRAWL_BASE_URL,
+                Referer: `${process.env.CRAWL_BASE_URL}/train/Sdah-Bnj-Local-33813/live`,
                 "Content-Type": "application/x-www-form-urlencoded",
                 Cookie: phpsessid,
               },
@@ -160,9 +160,9 @@ export default class Scrapper {
             const options = this.extractCaptchaOptions($);
 
             // Create the captcha image url
-            console.log("Getting the captcha image url...");
+            console.log("Creating the captcha image url...");
             const captchaImg = $(".captchaimage")["0"].attribs.src;
-            const captchaLink = "https://etrain.info" + captchaImg;
+            const captchaLink = process.env.CRAWL_BASE_URL + captchaImg;
             console.log(captchaLink);
 
             // Get the captcha image
@@ -182,7 +182,6 @@ export default class Scrapper {
           throw new Error("No scrap method found").message;
       }
     } catch (err) {
-      console.error(err);
       throw err;
     }
   }
@@ -220,19 +219,16 @@ export default class Scrapper {
         const children = trainlist[i].children;
         // Serialize
         const serialzier = new Serializer();
-        const data = serialzier.serialize({
+        const data = await serialzier.serialize({
           serializeInto: Constants.AVAILABLE_TRAINS,
           extractedElems: children,
           ch: $,
         });
-        data && jsonData.push(data);
-        // children.forEach(childNode => {
-        //   console.log($(childNode).text());
-        // });
+        jsonData.push(data);
       }
       console.log("JSON data: ", jsonData);
+      return jsonData;
     } catch (err) {
-      console.error(err);
       throw err;
     }
   }

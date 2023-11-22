@@ -66,9 +66,10 @@ class RailDog {
       console.log(body);
 
       const scrapper = new Scrapper();
-      await scrapper.scrapAvailableTrains(body);
-      res.status(200).json({ message: "success!" });
+      const jsondata = await scrapper.scrapAvailableTrains(body);
+      res.status(200).json({ message: "success!", available_trains: jsondata });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ Error: err });
     }
   }
