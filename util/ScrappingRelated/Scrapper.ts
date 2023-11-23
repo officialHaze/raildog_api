@@ -10,6 +10,7 @@ import FindTrainArgs from "../Interfaces/FindTrainArgs";
 import Serializer from "../SerializationRelated/Serializer";
 import Constants from "../Constants";
 import { SerializedAvailableTrainsData } from "../Interfaces/SerializedData";
+import LiveStatusArgs from "../Interfaces/LiveStatusArgs";
 
 export default class Scrapper {
   browser: Browser | null = null;
@@ -96,11 +97,34 @@ export default class Scrapper {
     });
   }
 
+  // Create referer URL for getting live status
+  private createRefererUrl({ trainName, trainNo }: { trainName: string; trainNo: number }) {
+    console.log("Creating Referer URL...");
+    // Split the train name based on spaces
+    const nameSplits = trainName.split(" ");
+    let formattedName = "";
+    nameSplits.forEach((split, i) => {
+      const lowercase = split.toLowerCase();
+      const updatedLwc = lowercase.replace(lowercase[0], lowercase[0].toUpperCase());
+      formattedName += i === nameSplits.length - 1 ? updatedLwc : updatedLwc + "-";
+    });
+    console.log("Train name modified: ", formattedName);
+
+    const base = process.env.CRAWL_BASE_URL;
+
+    if (!base) throw new Error("No crawl base url found in the env file!").message;
+
+    const url = `${base}/train/${formattedName}-${trainNo}/live`;
+    console.log("Referal URL created --> ", url);
+
+    return url;
+  }
+
   // LSP --> Live Status Page
-  public async scrapLiveStatus({
-    method,
-    phpsessid,
-  }: ScrapMethod): Promise<
+  public async scrapLiveStatus(
+    method: number,
+    options: LiveStatusArgs
+  ): Promise<
     [sD: string | null, phpsessid: string | null, options: CaptchaOption[] | null, data: any | null]
   > {
     try {
@@ -115,13 +139,19 @@ export default class Scrapper {
           return [null, null, null, page.content()];
 
         case 1:
+          console.log("Method 1 detected!");
+          const refUrl = this.createRefererUrl({
+            trainName: options.train_name,
+            trainNo: options.train_no,
+          });
+
           console.log("Pinging the etrain.info live status url...");
           const { data, request } = await axiosInstance.post(
             "/ajax.php?q=runningstatus&v=3.4.9",
             {
-              train: "33813",
-              atstn: "SDAH",
-              date: "21-11-2023",
+              train: options.train_no.toString(),
+              atstn: options.at_stn,
+              date: options.date,
               reqID: 1,
               reqCount: 1,
               final: 1,
@@ -129,9 +159,9 @@ export default class Scrapper {
             {
               headers: {
                 Origin: process.env.CRAWL_BASE_URL,
-                Referer: `${process.env.CRAWL_BASE_URL}/train/Sdah-Bnj-Local-33813/live`,
+                Referer: refUrl,
                 "Content-Type": "application/x-www-form-urlencoded",
-                Cookie: phpsessid,
+                Cookie: options.phpsessid,
               },
             }
           );

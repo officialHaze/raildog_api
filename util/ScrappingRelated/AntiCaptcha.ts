@@ -70,7 +70,7 @@ export default class AntiCaptcha {
 
       // Submit the captcha
       console.log("Submitting captcha...");
-      const { data } = await axiosInstance.post(
+      const res = await axiosInstance.post(
         "/ajax.php?q=captcha&v=3.4.9",
         {
           "captcha-code": captchaCode,
@@ -81,14 +81,14 @@ export default class AntiCaptcha {
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Origin: "https://etrain.info",
-            Referer: "https://etrain.info/train/Sdah-Bnj-Local-33813/live",
             Cookie: phpsessid,
           },
         }
       );
       console.log("Response after submitting the captcha: ");
-      console.log(data);
+      console.log(res.status, res.data);
+
+      return res.status;
     } catch (err) {
       console.error(err);
       throw err;
