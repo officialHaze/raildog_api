@@ -18,3 +18,15 @@ export interface SerializedAvailableTrainsData {
   };
   classes_available: string;
 }
+
+export interface SerializedLiveStatus {
+  id: string;
+  station_name: string;
+  at_this_stn: boolean;
+  is_no_halt_stn: boolean;
+  deprt_time: string; // (24 hrs format),
+  arrival_time: string; // (24 hrs format),
+  platform_no: number | null;
+  distance_from_src_km: string;
+  is_wifi_available?: boolean;
+}

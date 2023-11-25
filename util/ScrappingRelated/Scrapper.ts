@@ -9,7 +9,7 @@ import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions
 import FindTrainArgs from "../Interfaces/FindTrainArgs";
 import Serializer from "../SerializationRelated/Serializer";
 import Constants from "../Constants";
-import { SerializedAvailableTrainsData } from "../Interfaces/SerializedData";
+import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
 import LiveStatusArgs from "../Interfaces/LiveStatusArgs";
 
 export default class Scrapper {
@@ -165,10 +165,10 @@ export default class Scrapper {
               },
             }
           );
-          console.log(data);
+
           if (!data.data && data.sscript) {
-            console.log(data.sscript);
-            console.log("Captcha verification flow identified!");
+            // console.log(data.sscript);
+            console.log("Captcha verification triggered!");
             const rawHeads: string[] = request.res.rawHeaders;
             let phpsessid: string = "";
 
@@ -204,9 +204,42 @@ export default class Scrapper {
 
             return [sD, phpsessid, options, null];
           }
-          // parse the html and extract neccessary info
-          console.log(data.data);
-          return [null, null, null, data.data];
+
+          // parse the html and extract neccessary info if no captcha verification is triggered
+          console.log("No captcha verification is triggered! Extracting html from data...");
+          const html = data.data;
+          const $ = ch.load(html);
+
+          console.log("Extracting the statuslist from HTML...");
+          const statusList = $(".intStnTbl > tbody > tr");
+          const statusListLength = statusList.length;
+
+          const jsonData: SerializedLiveStatus[] = [];
+
+          console.log("Serializing live status data...");
+          // Serialize the data
+          for (let i = 0; i < statusListLength; i++) {
+            const children = statusList[i].children;
+            // Serialize
+            const serialzier = new Serializer();
+            const data = await serialzier.serializeLiveStatus({
+              serializeInto: Constants.LIVE_STATUS,
+              extractedElems: children,
+              ch: $,
+            });
+
+            // Check if no halt station
+            const isNoHalt = $(statusList[i]).attr("class")?.includes("hide") ?? false;
+
+            const updatedData: SerializedLiveStatus = {
+              ...data,
+              is_no_halt_stn: isNoHalt,
+            };
+
+            jsonData.push(updatedData);
+          }
+          console.log("Serialization complete returning serialized data!");
+          return [null, null, null, jsonData];
 
         default:
           throw new Error("No scrap method found").message;

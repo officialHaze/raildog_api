@@ -67,7 +67,7 @@ class RailDog {
       await scrapper.closeBrowser(); // Only plausible when method is 0
 
       if (sD && phpsessid && options) res.status(403).json({ message: { sD, phpsessid, options } });
-      else if (data) res.status(200).send(data);
+      else if (data) res.status(200).json({ message: "success!", live_status: data });
       else res.status(400).json({ Error: "Bad request" });
     } catch (err) {
       // Handle err
