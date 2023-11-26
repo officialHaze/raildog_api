@@ -5,24 +5,50 @@ import Scrapper from "./util/ScrappingRelated/Scrapper";
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
+import WebSocket, { OPEN, WebSocketServer } from "ws";
+import http from "http";
+import Logger from "./util/Logger";
 
 class RailDog {
-  private static server = express();
+  private static app = express();
+  private static server = http.createServer(this.app);
   private static PORT = 5050;
+  private static logger = new Logger();
 
   public static main(args?: string[]): void {
     dotenv.config();
 
-    this.server.use(express.urlencoded({ extended: true }));
-    this.server.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(express.json());
 
     this.server.listen(this.PORT, () => {
       console.log(`Server running on port: ${this.PORT}`);
     });
 
-    this.server.post("/get_live_status", this.getLiveStatus);
-    this.server.post("/bypass_captcha", this.bypassCaptcha);
-    this.server.post("/get_trains", this.findTrains);
+    this.app.post("/get_live_status", this.getLiveStatus);
+    this.app.post("/bypass_captcha", this.bypassCaptcha);
+    this.app.post("/get_trains", this.findTrains);
+
+    //Websocket server
+    const wss = new WebSocketServer({ server: this.server });
+
+    this.logger.start();
+    wss.on("connection", ws => {
+      this.logger.log("New client connection to WSS");
+
+      ws.on("message", (data, isBinary) => {
+        this.logger.log("Received: " + data.toString("utf-8"));
+        this.logger.log("Emitting to all clients...");
+        wss.clients.forEach(client => {
+          if (client.readyState === OPEN) {
+            client.send(data.toString("utf-8"));
+            this.logger.log("Data emitted..closing connection to this client!");
+            client.close();
+          }
+        });
+        this.logger.end();
+      });
+    });
   }
 
   private static async bypassCaptcha(req: Request, res: Response) {
