@@ -1,13 +1,16 @@
-import { CaptchaBypassOption } from "./util/Interfaces/CaptchaOptions";
-import FindTrainArgs from "./util/Interfaces/FindTrainArgs";
-import AntiCaptcha from "./util/ScrappingRelated/AntiCaptcha";
-import Scrapper from "./util/ScrappingRelated/Scrapper";
+import { CaptchaBypassOption } from "./src/Interfaces/CaptchaOptions";
+import FindTrainArgs from "./src/Interfaces/FindTrainArgs";
+import AntiCaptcha from "./src/ScrappingRelated/AntiCaptcha";
+import Scrapper from "./src/ScrappingRelated/Scrapper";
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
-import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
-import WebSocket, { OPEN, WebSocketServer } from "ws";
+import LiveStatusArgs from "./src/Interfaces/LiveStatusArgs";
+import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
-import Logger from "./util/Logger";
+import Logger from "./src/Logger";
+import DB from "./src/lib/Database";
+import WorkerRegistration from "./src/Interfaces/WorkerRegistration";
+import Worker from "./src/Models/Worker";
 
 class RailDog {
   private static app = express();
@@ -22,12 +25,24 @@ class RailDog {
     this.app.use(express.json());
 
     this.server.listen(this.PORT, () => {
-      console.log(`Server running on port: ${this.PORT}`);
+      console.log(`Server is running on port: ${this.PORT}`);
+
+      // Connect to DB
+      try {
+        console.log("Connecting to MongoDB...");
+        DB.connect().catch(err => {
+          throw err;
+        });
+      } catch (err) {
+        console.error("Connection to MongoDB failed!");
+        console.error(err);
+      }
     });
 
     this.app.post("/get_live_status", this.getLiveStatus);
     this.app.post("/bypass_captcha", this.bypassCaptcha);
     this.app.post("/get_trains", this.findTrains);
+    this.app.post("/register_worker", this.registerWorker);
 
     //Websocket server
     const wss = new WebSocketServer({ server: this.server });
@@ -40,7 +55,7 @@ class RailDog {
         this.logger.log("Received: " + data.toString("utf-8"));
         this.logger.log("Emitting to all clients...");
         wss.clients.forEach(client => {
-          if (client.readyState === OPEN) {
+          if (client.readyState === WebSocket.OPEN) {
             client.send(data.toString("utf-8"));
             this.logger.log("Data emitted..closing connection to this client!");
             client.close();
@@ -49,6 +64,46 @@ class RailDog {
         this.logger.end();
       });
     });
+  }
+
+  private static async registerWorker(req: Request, res: Response) {
+    try {
+      const { full_name, phone_no, email, country }: WorkerRegistration = req.body;
+
+      // Check if worker with same email exists
+      console.log("Checking if worker exists...");
+      const db = new DB();
+      const workerExists = await db.workerExists(email);
+
+      if (workerExists) {
+        console.log("Worker is already registered !");
+        res.status(400).json({ Error: "Worker/Employee is already registered!" });
+        return;
+      }
+
+      // Create / Register a new worker if worker does not exist
+      console.log("Worker is not registered....creating a new worker instance...");
+      const newWorker = new Worker({
+        full_name,
+        email,
+        phone_no,
+        country,
+        is_online: false,
+        is_available: false,
+        is_verified: false,
+      });
+
+      console.log("Registering new worker...");
+      await newWorker.save();
+
+      console.log("Worker registered!!");
+      res.status(201).json({ message: "Worker successfully registered!" });
+    } catch (err) {
+      console.error(err);
+      res
+        .status(500)
+        .json({ Error: "Something went wrong in the server! Please try again after sometime!" });
+    }
   }
 
   private static async bypassCaptcha(req: Request, res: Response) {
