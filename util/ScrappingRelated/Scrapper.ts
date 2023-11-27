@@ -103,7 +103,7 @@ export default class Scrapper {
   }
 
   // Create referer URL for getting live status
-  private createRefererUrl({ trainName, trainNo }: { trainName: string; trainNo: number }) {
+  private createRefererUrl({ trainName, trainNo }: { trainName: string; trainNo: string }) {
     this.logger.log("Creating Referer URL...");
     // Split the train name based on spaces
     const nameSplits = trainName.split(" ");
@@ -162,7 +162,7 @@ export default class Scrapper {
           const { data, request } = await axiosInstance.post(
             "/ajax.php?q=runningstatus&v=3.4.9",
             {
-              train: options.train_no.toString(),
+              train: options.train_no,
               atstn: options.at_stn,
               date: options.date,
               reqID: 1,
@@ -223,6 +223,12 @@ export default class Scrapper {
           // parse the html and extract neccessary info if no captcha verification is triggered
           this.logger.log("No captcha verification is triggered! Extracting html from data...");
           const html = data.data;
+
+          if (!html) {
+            const err = data.error.split(".")[0];
+            throw err;
+          }
+
           const $ = ch.load(html);
 
           this.logger.log("Extracting the statuslist from HTML...");
