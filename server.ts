@@ -118,6 +118,7 @@ class RailDog {
       else res.status(400).json({ Error: "Bad request" });
     } catch (err) {
       // Handle err
+      console.error(err);
       res.status(500).json({ Error: err });
     }
   }

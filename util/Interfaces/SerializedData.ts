@@ -1,6 +1,6 @@
 export interface SerializedAvailableTrainsData {
   id: string;
-  train_no: number;
+  train_no: string;
   train_name: string;
   source_stn: string;
   depart_time: string;

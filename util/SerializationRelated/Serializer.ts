@@ -95,9 +95,10 @@ export default class Serializer {
     const nodesLength = nodes.length;
     return new Promise((res, rej) => {
       if (nodesLength <= 0) rej(new Error("Nodes list empty, no data to extract!"));
+      console.log($(nodes[0]).text());
       let serializedData: SerializedAvailableTrainsData = {
         id: Indentifier.uniqueId(),
-        train_no: parseInt($(nodes[0]).text()),
+        train_no: $(nodes[0]).text(),
         train_name: $(nodes[1]).text(),
         source_stn: $(nodes[2]).text(),
         depart_time: $(nodes[3]).text(),
