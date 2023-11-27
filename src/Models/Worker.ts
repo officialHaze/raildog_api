@@ -4,7 +4,7 @@ const worker = new mongoose.Schema(
   {
     task_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Worker",
+      ref: "Task",
     },
     full_name: {
       type: String,
