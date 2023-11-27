@@ -4,8 +4,8 @@ export default interface CaptchaOption {
 }
 
 export interface CaptchaBypassOption {
-  captchaCode: string;
   captchaOptions: CaptchaOption[];
   sD: string;
   phpsessid: string;
+  taskID: string;
 }

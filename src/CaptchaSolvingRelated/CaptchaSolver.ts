@@ -3,8 +3,11 @@ import Task from "../Models/Task";
 import mongoose from "mongoose";
 import Worker from "../Models/Worker";
 import { pathToFileURL } from "url";
+import TaskUpdateArgs from "../Interfaces/UpdateTaskArgs";
 
 export default class CaptchaSolver {
+  public solvedCaptcha: string = "";
+
   public async createTask(captchaFilepath: string) {
     const create = async (data: string) => {
       try {
@@ -44,6 +47,54 @@ export default class CaptchaSolver {
 
       console.log("Task created: " + taskID);
       return `${taskID}`;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  public async isTaskComplete(taskID: string) {
+    console.log("Finding the task from DB...");
+    const task = await Task.findOne({ _id: taskID });
+
+    if (!task) throw new Error("Task dosen't exist").message;
+
+    const isComplete = task.status === "complete";
+
+    if (isComplete && task.answer) this.solvedCaptcha = task.answer;
+    else if (isComplete && !task.answer)
+      throw new Error("Task is complete but no answer provided!").message;
+
+    return isComplete;
+  }
+
+  private async unassignTask(taskID: string) {
+    try {
+      console.log("Searching for worker with the assigned task and unassigning...");
+      const unassignedWorker = await Worker.findOneAndUpdate(
+        { task_id: taskID },
+        { task_id: null },
+        { new: true }
+      );
+
+      console.log("Task unassigned: ", unassignedWorker);
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  public async updateTaskStatus({ taskID, status, answer, difficulty }: TaskUpdateArgs) {
+    try {
+      console.log("Updating task...");
+      const updatedTask = await Task.findByIdAndUpdate(
+        taskID,
+        { status, answer, difficulty },
+        { new: true }
+      );
+
+      console.log("Task updated: ", updatedTask);
+
+      // Unassign the task
+      await this.unassignTask(taskID);
     } catch (err) {
       throw err;
     }

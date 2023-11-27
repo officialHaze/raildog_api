@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
 import axiosInstance from "../axios.config";
 
@@ -60,8 +61,35 @@ export default class AntiCaptcha {
     return sR;
   }
 
-  public async bypassCaptcha({ captchaCode, captchaOptions, sD, phpsessid }: CaptchaBypassOption) {
+  private solveCaptcha(taskID: string): Promise<string> {
+    return new Promise((res, rej) => {
+      try {
+        // Get the captcha solve task response
+        const socket = new WebSocket(`ws://localhost:5050/${taskID}`);
+
+        socket.addEventListener("open", socket => {
+          console.log("Connected with WSS");
+        });
+
+        socket.addEventListener("message", async msgEvt => {
+          const captchaCode = msgEvt.data.toString("utf-8");
+          console.log("Solved captcha: ", captchaCode);
+          res(captchaCode);
+        });
+
+        socket.addEventListener("close", () => {
+          console.log("WS Server closed the connection!");
+        });
+      } catch (err) {
+        rej(err);
+      }
+    });
+  }
+
+  public async bypassCaptcha({ captchaOptions, sD, phpsessid, taskID }: CaptchaBypassOption) {
     try {
+      let captchaCode: string = await this.solveCaptcha(taskID);
+
       const correctOption: CaptchaOption = captchaOptions.filter((option, idx) => {
         return option.captchaCode === captchaCode;
       })[0];

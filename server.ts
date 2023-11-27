@@ -11,6 +11,8 @@ import Logger from "./src/Logger";
 import DB from "./src/lib/Database";
 import WorkerRegistration from "./src/Interfaces/WorkerRegistration";
 import Worker from "./src/Models/Worker";
+import CaptchaSolver from "./src/CaptchaSolvingRelated/CaptchaSolver";
+import TaskUpdateArgs from "./src/Interfaces/UpdateTaskArgs";
 
 class RailDog {
   private static app = express();
@@ -47,22 +49,69 @@ class RailDog {
     //Websocket server
     const wss = new WebSocketServer({ server: this.server });
 
-    this.logger.start();
-    wss.on("connection", ws => {
-      this.logger.log("New client connection to WSS");
+    wss.on("connection", async (ws, req) => {
+      try {
+        console.log("New client connection to WSS");
+        const urlSplits = req.url?.split("/");
 
-      ws.on("message", (data, isBinary) => {
-        this.logger.log("Received: " + data.toString("utf-8"));
-        this.logger.log("Emitting to all clients...");
-        wss.clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(data.toString("utf-8"));
-            this.logger.log("Data emitted..closing connection to this client!");
-            client.close();
-          }
+        if (!urlSplits) {
+          throw new Error("Expected task id in params!").message;
+        }
+
+        const taskID = urlSplits[urlSplits.length - 1];
+
+        console.log("Task ID: ", taskID);
+
+        // Check if task is already complete
+        const captchaSolver = new CaptchaSolver();
+        console.log("Checking if task is complete...");
+        const isTaskComplete = await captchaSolver.isTaskComplete(taskID);
+
+        if (isTaskComplete) {
+          console.log("Task complete!");
+          const solvedCaptcha = captchaSolver.solvedCaptcha;
+          console.log("Solved captcha: ", solvedCaptcha);
+
+          //Emit the solved the captcha
+          console.log("Emitting the solved captcha...");
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(solvedCaptcha);
+              console.log("Data emitted..closing connection to this client!");
+              client.close();
+            }
+          });
+          return;
+        }
+
+        console.log("Task is not complete...waiting for answer...");
+        ws.on("message", async (data, isBinary) => {
+          console.log("Answer received: ", JSON.parse(data.toString()));
+
+          const { status, difficulty, answer }: TaskUpdateArgs = JSON.parse(data.toString());
+
+          // Update the task status
+          await captchaSolver.updateTaskStatus({
+            taskID,
+            status,
+            difficulty,
+            answer,
+          });
+          console.log("Emitting to all but current clients..");
+
+          wss.clients.forEach(client => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(answer);
+              console.log("Data emitted...closing connection to this client");
+              client.close();
+            }
+          });
+          ws.close();
         });
-        this.logger.end();
-      });
+      } catch (err) {
+        console.error(err);
+        ws.close();
+      }
     });
   }
 
@@ -137,7 +186,7 @@ class RailDog {
       const scrapper = new Scrapper();
       const method = 1; // Use legacy request ping technique with axios
 
-      const [sD, phpsessid, options, data] = await scrapper.scrapLiveStatus(method, {
+      const [sD, phpsessid, options, taskID, data] = await scrapper.scrapLiveStatus(method, {
         phpsessid: phpsessid_,
         at_stn: at_stn,
         date: date,
@@ -147,11 +196,17 @@ class RailDog {
 
       await scrapper.closeBrowser(); // Only plausible when method is 0
 
-      if (sD && phpsessid && options) res.status(403).json({ message: { sD, phpsessid, options } });
+      if (sD && phpsessid && options && taskID)
+        res.status(403).json({
+          message:
+            "Captcha verification is triggered...a automated captcha solving task is already created, use the taskid to get the task response",
+          data: { sD, phpsessid, options, taskID },
+        });
       else if (data) res.status(200).json({ message: "success!", live_status: data });
       else res.status(400).json({ Error: "Bad request" });
     } catch (err) {
       // Handle err
+      console.error(err);
       res.status(500).json({ Error: err });
     }
   }
