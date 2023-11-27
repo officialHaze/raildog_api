@@ -8,6 +8,8 @@ import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
 import WebSocket, { OPEN, WebSocketServer } from "ws";
 import http from "http";
 import Logger from "./util/Logger";
+import fs from "fs";
+import path from "path";
 
 class RailDog {
   private static app = express();
@@ -28,27 +30,40 @@ class RailDog {
     this.app.post("/get_live_status", this.getLiveStatus);
     this.app.post("/bypass_captcha", this.bypassCaptcha);
     this.app.post("/get_trains", this.findTrains);
+    this.app.post("/get_captcha_image", this.getCaptchaImage);
 
-    //Websocket server
-    const wss = new WebSocketServer({ server: this.server });
+    // //Websocket server
+    // const wss = new WebSocketServer({ server: this.server });
 
-    this.logger.start();
-    wss.on("connection", ws => {
-      this.logger.log("New client connection to WSS");
+    // this.logger.start();
+    // wss.on("connection", ws => {
+    //   this.logger.log("New client connection to WSS");
 
-      ws.on("message", (data, isBinary) => {
-        this.logger.log("Received: " + data.toString("utf-8"));
-        this.logger.log("Emitting to all clients...");
-        wss.clients.forEach(client => {
-          if (client.readyState === OPEN) {
-            client.send(data.toString("utf-8"));
-            this.logger.log("Data emitted..closing connection to this client!");
-            client.close();
-          }
-        });
-        this.logger.end();
-      });
-    });
+    //   ws.on("message", (data, isBinary) => {
+    //     this.logger.log("Received: " + data.toString("utf-8"));
+    //     this.logger.log("Emitting to all clients...");
+    //     wss.clients.forEach(client => {
+    //       if (client.readyState === OPEN) {
+    //         client.send(data.toString("utf-8"));
+    //         this.logger.log("Data emitted..closing connection to this client!");
+    //         client.close();
+    //       }
+    //     });
+    //     this.logger.end();
+    //   });
+    // });
+  }
+
+  private static async getCaptchaImage(req: Request, res: Response) {
+    try {
+      const filename: string = req.body.filename;
+      const filepath: string = path.join(__dirname, `/Captchas/${filename}`);
+
+      //Download the file
+      res.status(200).download(filepath);
+    } catch (err) {
+      res.status(500).json({ Error: "Internal server error!" });
+    }
   }
 
   private static async bypassCaptcha(req: Request, res: Response) {
@@ -82,17 +97,23 @@ class RailDog {
       const scrapper = new Scrapper();
       const method = 1; // Use legacy request ping technique with axios
 
-      const [sD, phpsessid, options, data] = await scrapper.scrapLiveStatus(method, {
-        phpsessid: phpsessid_,
-        at_stn: at_stn,
-        date: date,
-        train_no: train_no,
-        train_name: train_name,
-      });
+      const [sD, phpsessid, options, captchafilename, data] = await scrapper.scrapLiveStatus(
+        method,
+        {
+          phpsessid: phpsessid_,
+          at_stn: at_stn,
+          date: date,
+          train_no: train_no,
+          train_name: train_name,
+        }
+      );
 
       await scrapper.closeBrowser(); // Only plausible when method is 0
 
-      if (sD && phpsessid && options) res.status(403).json({ message: { sD, phpsessid, options } });
+      if (sD && phpsessid && options && captchafilename)
+        res
+          .status(403)
+          .json({ message: { sD, phpsessid, captchaOptions: options, captchafilename } });
       else if (data) res.status(200).json({ message: "success!", live_status: data });
       else res.status(400).json({ Error: "Bad request" });
     } catch (err) {
