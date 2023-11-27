@@ -12,6 +12,7 @@ import Constants from "../Constants";
 import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
 import LiveStatusArgs from "../Interfaces/LiveStatusArgs";
 import Logger from "../Logger";
+import path from "path";
 
 export default class Scrapper {
   browser: Browser | null = null;
@@ -73,7 +74,7 @@ export default class Scrapper {
     return options;
   }
 
-  private getCaptchaImage(captchaImgLink: string, currentphpsessid: string) {
+  private saveCaptchaImg(captchaImgLink: string, currentphpsessid: string): Promise<string> {
     return new Promise(async (res, rej) => {
       try {
         const { data } = await axiosInstance.get(captchaImgLink, {
@@ -83,13 +84,15 @@ export default class Scrapper {
           },
         });
         const stream: Stream = data;
+        const filename = `captcha_${Date.now()}.jpg`;
+        const filepath = path.join(__dirname, `../../Captchas/${filename}`);
         // TODO: Need to change in prod. To use external text captcha bypass services.
         stream.on("data", data => {
-          fs.writeFile("./captcha.jpg", data, err => {
+          fs.writeFile(filepath, data, err => {
             if (err) throw err;
             else {
               this.logger.log("Captcha image saved!");
-              res("");
+              res(filename);
             }
           });
         });
@@ -127,7 +130,13 @@ export default class Scrapper {
     method: number,
     options: LiveStatusArgs
   ): Promise<
-    [sD: string | null, phpsessid: string | null, options: CaptchaOption[] | null, data: any | null]
+    [
+      sD: string | null,
+      phpsessid: string | null,
+      options: CaptchaOption[] | null,
+      captchafile: string | null,
+      data: any | null
+    ]
   > {
     try {
       this.logger.start();
@@ -140,7 +149,7 @@ export default class Scrapper {
           if (!page) throw new Error("No page open in browser!").message;
 
           await page.goto("https://etrain.info/train/Sdah-Bnj-Local-33813/live");
-          return [null, null, null, page.content()];
+          return [null, null, null, null, page.content()];
 
         case 1:
           this.logger.log("Method 1 detected!");
@@ -201,14 +210,14 @@ export default class Scrapper {
 
             // Get the captcha image
             this.logger.log("Getting the captcha image...");
-            await this.getCaptchaImage(captchaLink, phpsessid);
+            const captchafilename = await this.saveCaptchaImg(captchaLink, phpsessid);
 
             // Extract the value of sD, required to create the sR(captcha-text)
             const sD = this.extractSDVal(data.sscript);
 
             this.logger.end();
 
-            return [sD, phpsessid, options, null];
+            return [sD, phpsessid, options, captchafilename, null];
           }
 
           // parse the html and extract neccessary info if no captcha verification is triggered
@@ -248,7 +257,7 @@ export default class Scrapper {
 
           this.logger.end();
 
-          return [null, null, null, jsonData];
+          return [null, null, null, null, jsonData];
 
         default:
           throw new Error("No scrap method found").message;
