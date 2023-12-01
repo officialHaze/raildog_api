@@ -1,5 +1,5 @@
 # Raildog
-Indian Railway status provider
+Indian Railway status provider API
 
 ## To test the API, follow the below instructions
 
