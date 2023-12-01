@@ -1,4 +1,4 @@
-# raildog_api
+# Raildog
 Indian Railway status provider
 
 ## To test the API, follow the below instructions
@@ -15,7 +15,7 @@ npm install
 ```
 
 NOTE: This API has been written in typescript, and the build folder is not included, so make sure you have typescript installed globally
-      or you can simply install it for the current project by typing the following commands:
+      or you can simply install it for the current project by typing the following command:
       ```
       npm install typescript
       ```
