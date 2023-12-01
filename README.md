@@ -13,10 +13,11 @@ Once inside the directory create a .env file
       ```
       touch .env
       ```
- to set the environment(NODE_ENV)
+to set the environment(NODE_ENV).
        ```
        NODE_ENV=dev
        ```
+       
 The API will be tested in a dev environment
 
 There are other env variables that need to be set, if you really want to test the API,
@@ -28,7 +29,7 @@ with the subject
       ```
       Raildog Test ENV
       ```
- and I will get back to as soon as possible.
+and I will get back to as soon as possible.
 
 Second, install all the dependencies:
 ```npm
