@@ -16,7 +16,7 @@ npm install
 
 NOTE: This API has been written in typescript, and the build folder is not included, so make sure you have typescript installed globally
       or you can simply install it for the current project by typing the following commands:
-      ```npm
+      ```
       npm install typescript
       ```
 
