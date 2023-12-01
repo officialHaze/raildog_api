@@ -29,7 +29,7 @@ with the subject
       ```
       Raildog Test ENV
       ```
-and I will get back to as soon as possible.
+and I will get back to you as soon as possible.
 
 Second, install all the dependencies:
 ```npm
