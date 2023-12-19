@@ -10,6 +10,8 @@ import http from "http";
 import Logger from "./util/Logger";
 import fs from "fs";
 import path from "path";
+import DB from "./util/DatabaseRelated/Database";
+import RouteController from "./util/Controllers/RouteController";
 
 class RailDog {
   private static app = express();
@@ -23,14 +25,23 @@ class RailDog {
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
-    this.server.listen(this.PORT, () => {
-      console.log(`Server running on port: ${this.PORT}`);
+    this.server.listen(this.PORT, async () => {
+      try {
+        console.log(`Server running on port: ${this.PORT}`);
+        // Connect to mongoDB
+        const db = new DB();
+        await db.connect();
+      }
+      catch(err) {
+        console.error(err)
+      }
     });
 
     this.app.post("/get_live_status", this.getLiveStatus);
     this.app.post("/bypass_captcha", this.bypassCaptcha);
     this.app.post("/get_trains", this.findTrains);
     this.app.post("/get_captcha_image", this.getCaptchaImage);
+    this.app.post("/register", RouteController.userRegistration);
 
     // //Websocket server
     // const wss = new WebSocketServer({ server: this.server });
