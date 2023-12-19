@@ -15,7 +15,6 @@ import RouteController from "./util/Controllers/RouteController";
 
 class RailDog {
   private static app = express();
-  private static server = http.createServer(this.app);
   private static PORT = 5050;
   private static logger = new Logger();
 
@@ -25,7 +24,7 @@ class RailDog {
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
-    this.server.listen(this.PORT, async () => {
+    this.app.listen(this.PORT, async () => {
       try {
         console.log(`Server running on port: ${this.PORT}`);
         // Connect to mongoDB

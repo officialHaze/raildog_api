@@ -1,19 +1,54 @@
-import { Request, Response } from "express";
+import { Request, Response, json } from "express";
 import UserData from "../Interfaces/UserData";
-import Generator from "../Generator";
+import Validator from "../Validator";
+import User from "../DatabaseRelated/Models/User";
+import DB from "../DatabaseRelated/Database";
 
 export default class RouteController {
-  public static userRegistration(req: Request, res: Response) {
+  public static async userRegistration(req: Request, res: Response) {
     try {
       const userData: UserData = req.body;
       console.log("User data for registration: ", userData);
       
-      // Validate the user data
+      // Check if user already exists
+      const user = await User.findOne({email: userData.email});
+      if(user) {
+        res.status(400).json({Error: "User is already registered!"});
+        return;
+      }
 
-      // Generate API key
-      const apikey = new Generator().generateAPIKey();
-      res.status(200).json({apikey});
-      // structure the user data and send it to DB
+      // Validate the user data
+      const isValidEmail = Validator.validateEmail(userData.email);
+      console.log("Email is valid? ", isValidEmail);
+      
+      const isValidPhone = Validator.validatePhone(userData.phone);
+      console.log("Is valid phone number? ", isValidPhone);
+
+      if(!isValidEmail) {
+        res.status(400).json({Error: "Invalid email!"});
+        return;
+      }
+
+      if(!isValidPhone) {
+        res.status(400).json({Error: "Invalid phone number!"});
+        return;
+      }
+
+      if(!userData.role) {
+        res.status(400).json({Error: "No role provided!"});
+        return;
+      }
+
+      if(userData.username.length > 20) {
+        res.status(400).json({Error: "Username maximum length exceeded!"});
+        return;
+      }
+
+      // Create the user / save in DB
+      const db = new DB();
+      await db.createUser(userData);
+
+      res.status(200).json({message: "User created!"});
     }
     catch(err) {
       console.error(err)

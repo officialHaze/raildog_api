@@ -71,4 +71,18 @@ export default class DB
       throw err
     }
   }
+
+  public async createUser(userData: UserData): Promise<void> {
+    try{
+      const newUser = new User({
+        ...userData,
+        is_verified: false,
+      });
+      const savedUser = await newUser.save();
+      console.log("User created!", savedUser)
+    }
+    catch(err) {
+      throw err
+    }
+  }
 }
