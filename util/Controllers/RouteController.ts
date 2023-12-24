@@ -3,6 +3,7 @@ import UserData from "../Interfaces/UserData";
 import Validator from "../Validator";
 import User from "../DatabaseRelated/Models/User";
 import DB from "../DatabaseRelated/Database";
+import Mailer from "../Classes/Mailer";
 
 export default class RouteController {
   public static async userRegistration(req: Request, res: Response) {
@@ -52,6 +53,18 @@ export default class RouteController {
     } catch (err) {
       console.error(err);
       res.status(500).json({ Error: "server error!" });
+    }
+  }
+
+  // Test route for checking nodemailer
+  public static async testMail(req: Request, res: Response) {
+    try {
+      const mailer = new Mailer();
+      await mailer.sendMail();
+      res.status(200).json({ message: "Success!" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ Error: "Server error!" });
     }
   }
 }

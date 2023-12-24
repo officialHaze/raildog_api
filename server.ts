@@ -35,6 +35,7 @@ class RailDog {
     this.app.post("/get_trains", this.findTrains);
     this.app.post("/get_captcha_image", this.getCaptchaImage);
     this.app.post("/register", RouteController.userRegistration);
+    this.app.get("/test-mail", RouteController.testMail);
   }
 
   private static async getCaptchaImage(req: Request, res: Response) {
