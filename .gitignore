@@ -7,3 +7,6 @@ Logs/
 .env
 
 test.ts
+
+index.html
+app.js
