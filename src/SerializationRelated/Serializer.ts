@@ -3,7 +3,7 @@ import * as ch from "cheerio";
 import Constants from "../Constants";
 import SerializerArgs from "../Interfaces/SerializerArgs";
 import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
-import Indentifier from "../Identifier";
+import Indentifier from "../util/Identifier";
 
 export default class Serializer {
   public async serialize(options: SerializerArgs) {

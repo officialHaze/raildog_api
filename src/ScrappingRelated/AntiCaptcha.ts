@@ -1,5 +1,6 @@
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
 import axiosInstance from "../axios.config";
+import Scrapper from "./Scrapper";
 
 export default class AntiCaptcha {
   private getCaptchaText(sD: string, sK: string) {
@@ -60,20 +61,26 @@ export default class AntiCaptcha {
     return sR;
   }
 
-  public async bypassCaptcha({ captchaCode, captchaOptions, sD, phpsessid }: CaptchaBypassOption) {
+  public async bypassCaptcha(scrapper: Scrapper, result: string) {
     try {
-      const correctOption: CaptchaOption = captchaOptions.filter((option, idx) => {
-        return option.captchaCode === captchaCode;
+      const correctOption: CaptchaOption = scrapper.captchaOptions.filter((option, idx) => {
+        return option.captchaCode === result;
       })[0];
-      console.log(correctOption, sD, phpsessid);
-      const sR = this.getCaptchaText(sD, correctOption.captchaCodeIdx.toString());
+      if (!result) {
+        console.log("PHPSESSID: ", scrapper.phpsessid);
+        console.log("SD: ", scrapper.sD);
+        console.log("OPTIONS: ", scrapper.captchaOptions);
+        return;
+      }
+      console.log(correctOption, scrapper.sD, scrapper.phpsessid);
+      const sR = this.getCaptchaText(scrapper.sD, correctOption.captchaCodeIdx.toString());
 
       // Submit the captcha
       console.log("Submitting captcha...");
       const res = await axiosInstance.post(
         "/ajax.php?q=captcha&v=3.4.9",
         {
-          "captcha-code": captchaCode,
+          "captcha-code": result,
           reqID: 1,
           reqCount: 1,
           "captcha-text": sR,
@@ -81,7 +88,7 @@ export default class AntiCaptcha {
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Cookie: phpsessid,
+            Cookie: scrapper.phpsessid,
           },
         }
       );
