@@ -1,10 +1,7 @@
-import { CaptchaBypassOption } from "./src/Interfaces/CaptchaOptions";
-import FindTrainArgs from "./src/Interfaces/FindTrainArgs";
-import AntiCaptcha from "./src/ScrappingRelated/AntiCaptcha";
-import Scrapper from "./src/ScrappingRelated/Scrapper";
-import dotenv from "dotenv";
-import LiveStatusArgs from "./src/Interfaces/LiveStatusArgs";
-import path from "path";
+import FindTrainArgs from "./Interfaces/FindTrainArgs";
+import AntiCaptcha from "./ScrappingRelated/AntiCaptcha";
+import Scrapper from "./ScrappingRelated/Scrapper";
+import LiveStatusArgs from "./Interfaces/LiveStatusArgs";
 
 export default class RailDog {
   scrapper: any;

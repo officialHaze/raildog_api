@@ -1,5 +1,5 @@
-import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
-import axiosInstance from "../axios.config";
+import CaptchaOption from "../Interfaces/CaptchaOptions";
+import axiosInstance from "../util/axios.config";
 import Scrapper from "./Scrapper";
 
 export default class AntiCaptcha {

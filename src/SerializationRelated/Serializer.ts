@@ -1,6 +1,6 @@
 import { CheerioAPI } from "cheerio";
 import * as ch from "cheerio";
-import Constants from "../Constants";
+import Constants from "../util/Constants";
 import SerializerArgs from "../Interfaces/SerializerArgs";
 import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
 import Indentifier from "../util/Identifier";

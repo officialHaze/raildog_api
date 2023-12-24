@@ -1,38 +1,16 @@
-import puppeteer from "puppeteer";
-import { Browser } from "puppeteer";
-import ScrapMethod from "../Interfaces/ScrapMethod";
-import axiosInstance from "../axios.config";
+import axiosInstance from "../util/axios.config";
 import * as ch from "cheerio";
-import { Stream } from "stream";
-import fs from "fs";
-import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
+import CaptchaOption from "../Interfaces/CaptchaOptions";
 import FindTrainArgs from "../Interfaces/FindTrainArgs";
 import Serializer from "../SerializationRelated/Serializer";
-import Constants from "../Constants";
+import Constants from "../util/Constants";
 import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
 import LiveStatusArgs from "../Interfaces/LiveStatusArgs";
-import Logger from "../util/Logger";
-import path from "path";
 
 export default class Scrapper {
-  browser: Browser | null = null;
-  logger = new Logger();
   captchaOptions: CaptchaOption[] = [];
   phpsessid: string = "";
   sD: string = "";
-
-  private async openBrowser() {
-    this.browser = await puppeteer.launch();
-  }
-
-  public async closeBrowser() {
-    if (this.browser) await this.browser.close();
-  }
-
-  private async newPage() {
-    if (this.browser) return this.browser.newPage();
-    return null;
-  }
 
   private extractHTMLFrmSScript(sscript: string) {
     const startIdx = sscript.indexOf("html:'");
@@ -146,15 +124,6 @@ export default class Scrapper {
   > {
     try {
       switch (method) {
-        case 0:
-          await this.openBrowser();
-          const page = await this.newPage();
-
-          if (!page) throw new Error("No page open in browser!").message;
-
-          await page.goto("");
-          return [null, page.content()];
-
         case 1:
           console.log("Method 1 detected!");
           const refUrl = this.createRefererUrl({
