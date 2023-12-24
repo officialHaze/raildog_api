@@ -1,22 +1,16 @@
 import puppeteer from "puppeteer";
 import { Browser } from "puppeteer";
-import ScrapMethod from "../Interfaces/ScrapMethod";
 import axiosInstance from "../axios.config";
 import * as ch from "cheerio";
-import { Stream } from "stream";
-import fs from "fs";
 import CaptchaOption, { CaptchaBypassOption } from "../Interfaces/CaptchaOptions";
 import FindTrainArgs from "../Interfaces/FindTrainArgs";
 import Serializer from "../SerializationRelated/Serializer";
 import Constants from "../Constants";
 import { SerializedAvailableTrainsData, SerializedLiveStatus } from "../Interfaces/SerializedData";
 import LiveStatusArgs from "../Interfaces/LiveStatusArgs";
-import Logger from "../Logger";
-import path from "path";
 
 export default class Scrapper {
   browser: Browser | null = null;
-  logger = new Logger();
 
   private async openBrowser() {
     this.browser = await puppeteer.launch();
@@ -37,12 +31,12 @@ export default class Scrapper {
     const htmlWtag = sscript.substring(startIdx, endIdx + 1);
     const htmlWOTag = htmlWtag.split("html:")[1].replace(/'/g, "");
 
-    // this.logger.log(htmlWOTag);
+    // console.log(htmlWOTag);
     return htmlWOTag;
   }
 
   private extractSDVal(htmlStr: string) {
-    this.logger.log("Extracting the value of sD");
+    console.log("Extracting the value of sD");
     const startIdx = htmlStr.indexOf("sD");
     const endIdx = htmlStr.indexOf("digits");
     const sD = htmlStr
@@ -52,7 +46,7 @@ export default class Scrapper {
       .replace(",", "")
       .replace(/ /g, "");
 
-    this.logger.log("sD: " + sD);
+    console.log("sD: " + sD);
 
     return sD;
   }
@@ -74,28 +68,19 @@ export default class Scrapper {
     return options;
   }
 
-  private saveCaptchaImg(captchaImgLink: string, currentphpsessid: string): Promise<string> {
+  private getCaptchaImg(captchaImgLink: string, currentphpsessid: string): Promise<string> {
     return new Promise(async (res, rej) => {
       try {
-        const { data } = await axiosInstance.get(captchaImgLink, {
-          responseType: "stream",
+        const { data }: { data: Buffer } = await axiosInstance.get(captchaImgLink, {
+          responseType: "arraybuffer",
           headers: {
             Cookie: currentphpsessid,
           },
         });
-        const stream: Stream = data;
-        const filename = `captcha_${Date.now()}.jpg`;
-        const filepath = path.join(__dirname, `../../Captchas/${filename}`);
-        // TODO: Need to change in prod. To use external text captcha bypass services.
-        stream.on("data", data => {
-          fs.writeFile(filepath, data, err => {
-            if (err) throw err;
-            else {
-              this.logger.log("Captcha image saved!");
-              res(filename);
-            }
-          });
-        });
+        const base64 = data.toString("base64");
+        const dataUrl = `data:image/jpg;base64,${base64}`;
+        console.log("Base64 data url: ", dataUrl);
+        res(dataUrl);
       } catch (err) {
         rej(err);
       }
@@ -104,7 +89,7 @@ export default class Scrapper {
 
   // Create referer URL for getting live status
   private createRefererUrl({ trainName, trainNo }: { trainName: string; trainNo: string }) {
-    this.logger.log("Creating Referer URL...");
+    console.log("Creating Referer URL...");
     // Split the train name based on spaces
     const nameSplits = trainName.split(" ");
     let formattedName = "";
@@ -113,14 +98,14 @@ export default class Scrapper {
       const updatedLwc = lowercase.replace(lowercase[0], lowercase[0].toUpperCase());
       formattedName += i === nameSplits.length - 1 ? updatedLwc : updatedLwc + "-";
     });
-    this.logger.log("Train name modified: " + formattedName);
+    console.log("Train name modified: " + formattedName);
 
     const base = process.env.CRAWL_BASE_URL;
 
     if (!base) throw new Error("No crawl base url found in the env file!").message;
 
     const url = `${base}/train/${formattedName}-${trainNo}/live`;
-    this.logger.log("Referal URL created --> " + url);
+    console.log("Referal URL created --> " + url);
 
     return url;
   }
@@ -139,8 +124,6 @@ export default class Scrapper {
     ]
   > {
     try {
-      this.logger.start();
-
       switch (method) {
         case 0:
           await this.openBrowser();
@@ -152,13 +135,13 @@ export default class Scrapper {
           return [null, null, null, null, page.content()];
 
         case 1:
-          this.logger.log("Method 1 detected!");
+          console.log("Method 1 detected!");
           const refUrl = this.createRefererUrl({
             trainName: options.train_name,
             trainNo: options.train_no,
           });
 
-          this.logger.log("Pinging the etrain.info live status url...");
+          console.log("Pinging the etrain.info live status url...");
           const { data, request } = await axiosInstance.post(
             "/ajax.php?q=runningstatus&v=3.4.9",
             {
@@ -180,48 +163,46 @@ export default class Scrapper {
           );
 
           if (!data.data && data.sscript) {
-            // this.logger.log(data.sscript);
-            this.logger.log("Captcha verification triggered!");
+            // console.log(data.sscript);
+            console.log("Captcha verification triggered!");
             const rawHeads: string[] = request.res.rawHeaders;
             let phpsessid: string = "";
 
-            this.logger.log("Extracting PHPSESSID from cookie...");
+            console.log("Extracting PHPSESSID from cookie...");
             rawHeads.forEach(string => {
               if (string.includes("PHPSESSID")) {
                 phpsessid = string.split(";")[0];
               }
             });
-            this.logger.log(phpsessid);
+            console.log(phpsessid);
 
             // Extract html from sscript string
-            this.logger.log("Extracting HTML from sscript...");
+            console.log("Extracting HTML from sscript...");
             const html = this.extractHTMLFrmSScript(data.sscript);
             const $ = ch.load(html);
-            // this.logger.log($.html());
+            // console.log($.html());
 
             // Extract captcha options
             const options = this.extractCaptchaOptions($);
 
             // Create the captcha image url
-            this.logger.log("Creating the captcha image url...");
+            console.log("Creating the captcha image url...");
             const captchaImg = $(".captchaimage")["0"].attribs.src;
             const captchaLink = process.env.CRAWL_BASE_URL + captchaImg;
-            this.logger.log(captchaLink);
+            console.log(captchaLink);
 
             // Get the captcha image
-            this.logger.log("Getting the captcha image...");
-            const captchafilename = await this.saveCaptchaImg(captchaLink, phpsessid);
+            console.log("Getting the captcha image...");
+            const captchaDataUrl = await this.getCaptchaImg(captchaLink, phpsessid);
 
             // Extract the value of sD, required to create the sR(captcha-text)
             const sD = this.extractSDVal(data.sscript);
 
-            this.logger.end();
-
-            return [sD, phpsessid, options, captchafilename, null];
+            return [sD, phpsessid, options, captchaDataUrl, null];
           }
 
           // parse the html and extract neccessary info if no captcha verification is triggered
-          this.logger.log("No captcha verification is triggered! Extracting html from data...");
+          console.log("No captcha verification is triggered! Extracting html from data...");
           const html = data.data;
 
           if (!html) {
@@ -231,13 +212,13 @@ export default class Scrapper {
 
           const $ = ch.load(html);
 
-          this.logger.log("Extracting the statuslist from HTML...");
+          console.log("Extracting the statuslist from HTML...");
           const statusList = $(".intStnTbl > tbody > tr");
           const statusListLength = statusList.length;
 
           const jsonData: SerializedLiveStatus[] = [];
 
-          this.logger.log("Serializing live status data...");
+          console.log("Serializing live status data...");
           // Serialize the data
           for (let i = 0; i < statusListLength; i++) {
             const children = statusList[i].children;
@@ -259,9 +240,7 @@ export default class Scrapper {
 
             jsonData.push(updatedData);
           }
-          this.logger.log("Serialization complete returning serialized data!");
-
-          this.logger.end();
+          console.log("Serialization complete returning serialized data!");
 
           return [null, null, null, null, jsonData];
 
@@ -275,31 +254,29 @@ export default class Scrapper {
 
   public async scrapAvailableTrains({ startStation, stopStation, travelDate }: FindTrainArgs) {
     try {
-      this.logger.start();
-
       const param = `${startStation} to ${stopStation}`;
       const query = `date=${travelDate}`;
 
       const formattedParam = param.replace(/ /g, "-") + `/?${query}`;
-      this.logger.log(formattedParam);
+      console.log(formattedParam);
 
       // const crawlBaseUrl = process.env.CRAWL_BASE_URL;
-      // this.logger.log("CRAWL BASE URL: " + crawlBaseUrl);
+      // console.log("CRAWL BASE URL: " + crawlBaseUrl);
 
       // if (!crawlBaseUrl) throw new Error("Crawl url not found in env file!").message;
 
       const crawlUrl = `/trains/${formattedParam}`;
-      this.logger.log("URL to crawl to scrap available trains: " + crawlUrl);
+      console.log("URL to crawl to scrap available trains: " + crawlUrl);
 
       // Crawl the url
       const { data: html } = await axiosInstance.get(crawlUrl);
-      this.logger.log("Crawled data(HTML): " + html);
+      console.log("Crawled data(HTML): " + html);
 
       // Extract the table containing train list
       const $ = ch.load(html);
       const trainlist = $(".trainlist > table > tbody > tr");
       const trainlistLength = trainlist.length;
-      this.logger.log("Train list: " + trainlist);
+      console.log("Train list: " + trainlist);
 
       const jsonData: SerializedAvailableTrainsData[] = [];
 
@@ -315,9 +292,7 @@ export default class Scrapper {
         });
         jsonData.push(data);
       }
-      this.logger.log("JSON data: " + JSON.stringify(jsonData));
-
-      this.logger.end();
+      console.log("JSON data: " + JSON.stringify(jsonData));
 
       return jsonData;
     } catch (err) {
