@@ -67,7 +67,7 @@ export default class DB {
     }
   }
 
-  public async createUser(userData: UserData): Promise<void> {
+  public async createUser(userData: UserData) {
     try {
       const newUser = new User({
         ...userData,
@@ -75,6 +75,7 @@ export default class DB {
       });
       const savedUser = await newUser.save();
       console.log("User created!", savedUser);
+      return savedUser;
     } catch (err) {
       throw err;
     }

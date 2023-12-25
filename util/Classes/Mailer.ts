@@ -34,7 +34,7 @@ export default class Mailer {
       }
     });
   }
-  public async sendMail() {
+  public async sendMail({ to, html, subject }: { to: string; html: string; subject: string }) {
     try {
       const ACCESS_TOKEN = await this.authorize();
 
@@ -56,11 +56,9 @@ export default class Mailer {
 
       const info = await transport.sendMail({
         from: `"Raildog API" <${process.env.RAILDOG_EMAIL}>`,
-        subject: "This is a test mail!",
-        html: `
-            <p>Hello Moinak!</p>
-        `,
-        to: ["moinak.dey8@gmail.com"],
+        subject: subject,
+        html: html,
+        to: to,
       });
 
       console.log("Email dispatched!", info);

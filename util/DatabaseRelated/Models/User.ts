@@ -1,31 +1,33 @@
-import mongoose from "mongoose"
-
+import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
   {
     email: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
     username: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
     phone: {
       type: Number,
       required: true,
-      unique: true
+      unique: true,
+    },
+    password: {
+      type: String,
     },
     is_verified: {
       type: Boolean,
-      required: true
+      required: true,
     },
     // Role can be of 3 types only - Individual, Developer, Business
     role: {
       type: String,
-      required: true
+      required: true,
     },
     business_name: {
       type: String,
@@ -35,11 +37,10 @@ const UserSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
-)
+);
 
-const User = mongoose.model("User", UserSchema)
+const User = mongoose.model("User", UserSchema);
 
-export default User
-
+export default User;
