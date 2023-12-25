@@ -158,7 +158,14 @@ export default class AuthController {
       // Check if user exists
       const user = await DB.findUserByName(username);
       if (!user) {
-        res.status(402).json({ Error: "User is not registered" });
+        res.status(400).json({ Error: "User is not registered" });
+        return;
+      }
+
+      // Check if user is verified
+      const isVerified = user.is_verified;
+      if (!isVerified) {
+        res.status(402).json({ Error: "User is not verified!" });
         return;
       }
 
