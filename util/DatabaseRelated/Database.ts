@@ -89,4 +89,13 @@ export default class DB {
       throw error;
     }
   }
+
+  public static async findUserByName(username: string) {
+    try {
+      const user = await User.findOne({ username });
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

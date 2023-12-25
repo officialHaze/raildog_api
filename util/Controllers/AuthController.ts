@@ -9,8 +9,9 @@ import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import LoginData from "../Interfaces/LoginData";
 
-export default class RouteController {
+export default class AuthController {
   public static async userRegistration(req: Request, res: Response) {
     try {
       const userData: UserData = req.body;
@@ -69,7 +70,8 @@ export default class RouteController {
       const savedUser = await db.createUser(formattedUserData);
 
       // Generate verification link
-      const link = Generator.generateActivationLink(savedUser._id);
+      const generate = new Generator();
+      const link = generate.generateActivationLink(savedUser._id);
 
       // Send verification mail
       const html = `
@@ -148,6 +150,40 @@ export default class RouteController {
     }
   }
 
+  // Login controller
+  public static async login(req: Request, res: Response) {
+    try {
+      const { username, password }: LoginData = req.body;
+
+      // Check if user exists
+      const user = await DB.findUserByName(username);
+      if (!user) {
+        res.status(402).json({ Error: "User is not registered" });
+        return;
+      }
+
+      // Validate the password
+      const hashedPass = user.password;
+      const hasher = new Hasher(process.env.SALT_ROUNDS);
+      const isValidPass = await hasher.compareHash(password, hashedPass ?? "");
+      if (!isValidPass) {
+        res.status(403).json({ Error: "Wrong password!" });
+        return;
+      }
+
+      // Create access and refresh tokens
+      const generate = new Generator();
+      const accessToken = generate.generateToken(user._id, process.env.ACCESS_TOKEN_EXPIRY);
+      const refreshToken = generate.generateToken(user._id, process.env.REFRESH_TOKEN_EXPIRY);
+
+      // Return access and refresh tokens
+      res.status(200).json({ access_token: accessToken, refresh_token: refreshToken });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ Error: "Server error!" });
+    }
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {
@@ -166,7 +202,8 @@ export default class RouteController {
   // Test route for checking activation link generation
   public static async testGenerateActivationLink(req: Request, res: Response) {
     try {
-      const link = Generator.generateActivationLink("767y7678sd6c87sd687c");
+      const generate = new Generator();
+      const link = generate.generateActivationLink("767y7678sd6c87sd687c");
       res.status(200).json({ message: "success" });
     } catch (error) {
       console.error(error);
