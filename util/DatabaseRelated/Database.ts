@@ -4,6 +4,9 @@ import UserData from "../Interfaces/UserData";
 import masterAdminData from "../../masterAdminData";
 import User from "./Models/User";
 import AdminData from "../Interfaces/AdminData";
+import Generator from "../Classes/Generator";
+import APIKeyData from "../Interfaces/APIKeyData";
+import APIKey from "./Models/APIKey";
 
 export default class DB {
   public async connect() {
@@ -94,6 +97,36 @@ export default class DB {
     try {
       const user = await User.findOne({ username });
       return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public static async findUserById(uid: mongoose.Types.ObjectId) {
+    try {
+      const user = await User.findById(uid);
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public static async assignAPIKey(uid: string | mongoose.Types.ObjectId, apikey: string) {
+    try {
+      // Check previous api keys
+      const apiKeys = await APIKey.find({ user_id: uid });
+      console.log("Previous API Keys: ", apiKeys.length);
+
+      if (apiKeys.length > 3) throw new Error("API keys limit reached!").message;
+
+      const apiKeyData: APIKeyData = {
+        user_id: uid,
+        api_key: apikey,
+        is_enabled: true,
+      };
+      const newApiKey = new APIKey(apiKeyData);
+      const saved = await newApiKey.save();
+      console.log("API key created: ", saved);
     } catch (error) {
       throw error;
     }
