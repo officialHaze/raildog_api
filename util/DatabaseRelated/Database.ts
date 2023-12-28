@@ -4,7 +4,6 @@ import UserData from "../Interfaces/UserData";
 import masterAdminData from "../../masterAdminData";
 import User from "./Models/User";
 import AdminData from "../Interfaces/AdminData";
-import Generator from "../Classes/Generator";
 import APIKeyData from "../Interfaces/APIKeyData";
 import APIKey from "./Models/APIKey";
 
@@ -127,6 +126,18 @@ export default class DB {
       const newApiKey = new APIKey(apiKeyData);
       const saved = await newApiKey.save();
       console.log("API key created: ", saved);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public static async findAPIKey(apikey: string) {
+    try {
+      const doesAPIKeyExist = await APIKey.findOne({ api_key: apikey });
+      console.log("API KEY EXISTS? ", doesAPIKeyExist);
+      if (!doesAPIKeyExist) throw new Error("Invalid API Key!");
+      else if (!doesAPIKeyExist.is_enabled)
+        throw new Error("The API Key you are using is disabled!");
     } catch (error) {
       throw error;
     }
