@@ -213,6 +213,30 @@ export default class AuthController {
     }
   }
 
+  // Token refresh controller
+  public static async tokenRefresh(req: Request, res: Response) {
+    try {
+      const userId = req.decodedUserId;
+
+      // Create new access and refresh token
+      const generate = new Generator();
+      const newAccessToken: string = generate.generateToken(
+        userId,
+        process.env.ACCESS_TOKEN_EXPIRY
+      );
+      const newRefreshToken: string = generate.generateToken(
+        userId,
+        process.env.REFRESH_TOKEN_EXPIRY
+      );
+
+      // Send new set of tokens as response
+      return res.status(201).json({ access_token: newAccessToken, refresh_token: newRefreshToken });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ Error: "Server error!" });
+    }
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {

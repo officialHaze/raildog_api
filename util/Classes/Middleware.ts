@@ -17,10 +17,10 @@ export default class Middleware {
       return;
     }
     // Verify the access token
-    const secretSign = process.env.SECRET_SIGN;
-    if (!secretSign) throw new Error("JWT secret signature missing in env!").message;
+    // const secretSign = process.env.SECRET_SIGN;
+    // if (!secretSign) throw new Error("JWT secret signature missing in env!").message;
 
-    const decoded = Validator.tokenValidator(accessToken, secretSign);
+    const decoded = Validator.tokenValidator(accessToken);
     if (!decoded) throw new Error("No decoded value found!");
 
     req.decodedUserId = typeof decoded !== "string" ? decoded.userId : decoded;
@@ -38,15 +38,39 @@ export default class Middleware {
       return;
     }
     // Verify the access token
-    const secretSign = process.env.SECRET_SIGN;
-    if (!secretSign) throw new Error("JWT secret signature missing in env!").message;
+    // const secretSign = process.env.SECRET_SIGN;
+    // if (!secretSign) throw new Error("JWT secret signature missing in env!").message;
 
-    const decoded = Validator.tokenValidator(activationToken, secretSign);
+    const decoded = Validator.tokenValidator(activationToken);
     if (!decoded) throw new Error("No decoded value found!");
 
     req.decodedUserId = typeof decoded !== "string" ? decoded.userId : decoded;
 
     next();
+  }
+
+  public static validateRefreshToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const refreshToken: string = req.body.refresh_token;
+      console.log("Refresh token: ", refreshToken);
+
+      if (!refreshToken) return res.status(400).json({ Error: "Refresh token is missing!" });
+
+      // Validate the refresh token
+      const decoded = Validator.tokenValidator(refreshToken);
+      if (!decoded) return res.status(400).json({ Error: "Token couldn't be verified!" });
+
+      req.decodedUserId = typeof decoded !== "string" ? decoded.userId : decoded;
+
+      next();
+    } catch (error: any) {
+      if (error.message.includes("invalid"))
+        return res.status(403).json({ Error: "Invalid token!" });
+      else if (error.message.includes("expired"))
+        return res.status(403).json({ Error: "Token has expired!" });
+
+      return res.status(500).json({ Error: "Server error!" });
+    }
   }
 
   public static async validateAPIKey(req: Request, res: Response, next: NextFunction) {

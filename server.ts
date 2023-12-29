@@ -47,6 +47,10 @@ class RailDog {
     this.app.post("/api/bypass_captcha", APIRouteController.bypassCaptcha);
     this.app.post("/api/get_captcha_image", APIRouteController.getCaptchaImage);
 
+    // Refresh token route with middleware
+    this.app.use("/refresh_token", Middleware.validateRefreshToken);
+    this.app.post("/refresh_token", AuthController.tokenRefresh);
+
     // Activation token middleware with account activation route
     this.app.use("/activate/:activationToken", Middleware.validateActivationToken);
     this.app.use(Handler.handleTokenVerificationError);

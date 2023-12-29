@@ -179,6 +179,7 @@ export default class Scrapper {
             // Extract html from sscript string
             console.log("Extracting HTML from sscript...");
             const html = this.extractHTMLFrmSScript(data.sscript);
+            console.log("HTML: ", html);
             const $ = ch.load(html);
             // console.log($.html());
 
