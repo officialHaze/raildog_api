@@ -6,11 +6,13 @@ import Middleware from "./util/Classes/Middleware";
 import Handler from "./util/Classes/Handler";
 import mongoose from "mongoose";
 import APIRouteController from "./util/Controllers/APIRouteController";
+import UserData from "./util/Interfaces/UserData";
 
 declare global {
   namespace Express {
     interface Request {
       decodedUserId: mongoose.Types.ObjectId;
+      user: UserData;
     }
   }
 }
@@ -38,7 +40,13 @@ class RailDog {
 
     // Auth related routes
     this.app.post("/register", AuthController.userRegistration);
+    this.app.use("/login", [Middleware.isUserRegistered, Middleware.isUserVerified]);
     this.app.post("/login", AuthController.login);
+    this.app.use("/send_verification_email", [
+      Middleware.isUserRegistered,
+      Middleware.isUserNotVerified,
+    ]);
+    this.app.post("/send_verification_email", AuthController.sendVerificationEmail);
 
     // Train status API related routes that require API key validation
     this.app.use("/api/*", Middleware.validateAPIKey);
@@ -50,20 +58,26 @@ class RailDog {
     // Refresh token route with middleware
     this.app.use("/refresh_token", Middleware.validateRefreshToken);
     this.app.post("/refresh_token", AuthController.tokenRefresh);
+    this.app.use("/refresh_token", Handler.handleTokenVerificationError);
 
     // Activation token middleware with account activation route
-    this.app.use("/activate/:activationToken", Middleware.validateActivationToken);
-    this.app.use(Handler.handleTokenVerificationError);
+    this.app.use("/activate/:activationToken", [
+      Middleware.validateActivationToken,
+      Middleware.isUserNotVerified,
+    ]);
     this.app.get("/activate/:activationToken", AuthController.activateAccount);
+    this.app.use("/activate/:activationToken", Handler.handleTokenVerificationError);
 
     // Routes with token verification middleware
-    this.app.use(Middleware.validateToken);
-    this.app.use(Handler.handleTokenVerificationError);
-    this.app.post("/generate_api_key", AuthController.assignAPIKey);
+    this.app.use("/auth/*", Middleware.validateToken);
+    this.app.post("/auth/generate_api_key", AuthController.assignAPIKey);
+    this.app.use("/auth/*", Handler.handleTokenVerificationError);
 
     // TEST ROUTES
     this.app.get("/test-mail", AuthController.testMail);
     this.app.get("/test-generate-activate-link", AuthController.testGenerateActivationLink);
+
+    this.app.use(Handler.handleAppError);
   }
 }
 

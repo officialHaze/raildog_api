@@ -1,6 +1,9 @@
 import { google } from "googleapis";
 import Constants from "../Constants";
 import nodemailer from "nodemailer";
+import activateAccountTemplateJson from "../Json/emailTemplates.json";
+import Generator from "./Generator";
+import mongoose from "mongoose";
 
 export default class Mailer {
   private oauth2Client = new google.auth.OAuth2(
@@ -18,6 +21,31 @@ export default class Mailer {
       !process.env.RAILDOG_EMAIL
     )
       throw new Error("OAuth2 creds not provided!").message;
+  }
+
+  public async sendVerificationMail(uid: mongoose.Types.ObjectId | string, receiverEmail: string) {
+    try {
+      // Generate verification link
+      const generate = new Generator();
+      const link = generate.generateActivationLink(uid);
+
+      const html = `
+      <div>
+        ${activateAccountTemplateJson.activateEmail}
+        <a href=${link}>Activation link</a>
+      </div>
+     `;
+
+      await this.sendMail({
+        to: receiverEmail,
+        html,
+        subject: "Activate account",
+      });
+
+      return;
+    } catch (error) {
+      throw error;
+    }
   }
 
   private async authorize(): Promise<string> {
