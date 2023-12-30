@@ -12,8 +12,11 @@ export default class Validator {
     return numRegex.test(phone.toString()) && phone.toString().length === 10;
   }
 
-  public static tokenValidator(token: string, secretSign: string) {
+  public static tokenValidator(token: string) {
     try {
+      const secretSign = process.env.SECRET_SIGN;
+      if (!secretSign) throw new Error("JWT secret signature missing in env!");
+
       const decoded = jwt.verify(token, secretSign);
       return decoded;
     } catch (error) {
