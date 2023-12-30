@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import Cookie from "./Cookie";
 import Validator from "./Validator";
+import DB from "../DatabaseRelated/Database";
 
 export default class Middleware {
   public static validateToken(req: Request, res: Response, next: NextFunction) {
@@ -28,10 +29,9 @@ export default class Middleware {
   }
 
   public static validateActivationToken(req: Request, res: Response, next: NextFunction) {
-    console.log(req.path);
-    const splits = req.path.split("/");
-    console.log("Activation token: ", splits[splits.length - 1]);
-    const activationToken = splits[splits.length - 1];
+    // const splits = req.path.split("/");
+    // console.log("Activation token: ", splits[splits.length - 1]);
+    const { activationToken } = req.params;
 
     if (!activationToken) {
       res.status(401).json({ Error: "Unauthorized!" });
@@ -47,5 +47,28 @@ export default class Middleware {
     req.decodedUserId = typeof decoded !== "string" ? decoded.userId : decoded;
 
     next();
+  }
+
+  public static async validateAPIKey(req: Request, res: Response, next: NextFunction) {
+    try {
+      const apikey = req.query.key;
+      console.log("API KEY: ", apikey);
+
+      if (typeof apikey !== "string") throw new Error("Invalid API Key!");
+
+      // Search for this API key in DB
+      await DB.findAPIKey(apikey);
+
+      next();
+    } catch (err: any) {
+      console.error("API key verify error! ", err);
+      if (err.message.includes("Invalid")) {
+        return res.status(403).json({ Error: err.message });
+      }
+      if (err.message.includes("disabled")) {
+        return res.status(406).json({ Error: err.message });
+      }
+      return res.status(500).json({ Error: "Server Error!" });
+    }
   }
 }
