@@ -80,4 +80,13 @@ export default class DB {
       throw err;
     }
   }
+
+  public static async verifyUser(uid: mongoose.Types.ObjectId) {
+    try {
+      const updatedUser = await User.findByIdAndUpdate(uid, { is_verified: true }, { new: true });
+      console.log("User verified: ", updatedUser);
+    } catch (error) {
+      throw error;
+    }
+  }
 }

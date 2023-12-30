@@ -50,7 +50,10 @@ export default class Generator {
 
   public static generateActivationLink(userId: mongoose.Types.ObjectId | string): string {
     try {
-      const jwToken = jwt.sign({ data: userId }, "thisis my secret key", { expiresIn: "1m" });
+      const secretSign = process.env.SECRET_SIGN;
+      if (!secretSign) throw new Error("Secret key to sign jwt is missing!").message;
+
+      const jwToken = jwt.sign({ data: userId }, secretSign, { expiresIn: "1m" });
 
       const domain = process.env.SERVER_DOMAIN;
       if (!domain) throw new Error("Domain not found in the env file!");

@@ -7,6 +7,8 @@ import Mailer from "../Classes/Mailer";
 import activateAccountTemplateJson from "../Json/emailTemplates.json";
 import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 export default class RouteController {
   public static async userRegistration(req: Request, res: Response) {
@@ -105,6 +107,43 @@ export default class RouteController {
           return;
         }
       }
+      res.status(500).json({ Error: "Server error!" });
+    }
+  }
+
+  // Account activation
+  public static activateAccount(req: Request, res: Response) {
+    try {
+      // Validate the activation token(jwt)
+      const secret = process.env.SECRET_SIGN;
+      if (!secret) throw new Error("Secret key to validate jwt is missing!");
+
+      const activationToken = req.params.activationToken;
+      jwt.verify(activationToken, secret, async (err, decoded) => {
+        if (err) {
+          console.error("JWT verification error: ", err);
+
+          // Check the error type
+          const isExpired = err.message.includes("expired");
+          const isInvalid = err.message.includes("invalid");
+
+          isExpired && res.status(400).json({ Error: "Verification token expired!" });
+          isInvalid && res.status(403).json({ Error: "Token is invalid!" });
+          !isExpired && !isInvalid && res.status(400).json({ Error: "Token verification error" });
+          return;
+        }
+
+        if (!decoded) throw new Error("Token cannot be decoded!").message;
+        console.log("Decoded: ", decoded);
+
+        const uid: mongoose.Types.ObjectId = typeof decoded === "string" ? decoded : decoded.data;
+
+        await DB.verifyUser(uid);
+
+        res.status(200).json({ message: "User verified!" });
+      });
+    } catch (error) {
+      console.error(error);
       res.status(500).json({ Error: "Server error!" });
     }
   }
