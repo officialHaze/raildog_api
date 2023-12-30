@@ -2,6 +2,11 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 export default class Generator {
+  private jwtSecretSign = process.env.SECRET_SIGN ?? "";
+  constructor() {
+    if (!this.jwtSecretSign) throw new Error("JWT Secret sign is missing in env!").message;
+  }
+
   private static alphabets = [
     "a",
     "b",
@@ -48,12 +53,9 @@ export default class Generator {
     return apikey;
   }
 
-  public static generateActivationLink(userId: mongoose.Types.ObjectId | string): string {
+  public generateActivationLink(userId: mongoose.Types.ObjectId | string): string {
     try {
-      const secretSign = process.env.SECRET_SIGN;
-      if (!secretSign) throw new Error("Secret key to sign jwt is missing!").message;
-
-      const jwToken = jwt.sign({ data: userId }, secretSign, { expiresIn: "1m" });
+      const jwToken = this.generateToken(userId, process.env.ACTIVATION_TOKEN_EXPIRY);
 
       const domain = process.env.SERVER_DOMAIN;
       if (!domain) throw new Error("Domain not found in the env file!");
@@ -64,6 +66,18 @@ export default class Generator {
       return link;
     } catch (err) {
       throw err;
+    }
+  }
+
+  public generateToken(uid: mongoose.Types.ObjectId | string, expiry: string | undefined) {
+    try {
+      if (!expiry) throw new Error("Access token expiry time is missing!").message;
+
+      const token = jwt.sign({ userId: uid }, this.jwtSecretSign, { expiresIn: expiry });
+
+      return token;
+    } catch (error) {
+      throw error;
     }
   }
 }

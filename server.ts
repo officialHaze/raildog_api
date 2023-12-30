@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
 import path from "path";
 import DB from "./util/DatabaseRelated/Database";
-import RouteController from "./util/Controllers/RouteController";
+import AuthController from "./util/Controllers/AuthController";
 
 class RailDog {
   private static app = express();
@@ -34,12 +34,15 @@ class RailDog {
     this.app.post("/bypass_captcha", this.bypassCaptcha);
     this.app.post("/get_trains", this.findTrains);
     this.app.post("/get_captcha_image", this.getCaptchaImage);
-    this.app.post("/register", RouteController.userRegistration);
-    this.app.get("/activate/:activationToken", RouteController.activateAccount);
+
+    // Auth related routes
+    this.app.post("/register", AuthController.userRegistration);
+    this.app.get("/activate/:activationToken", AuthController.activateAccount);
+    this.app.post("/login", AuthController.login);
 
     // TEST ROUTES
-    this.app.get("/test-mail", RouteController.testMail);
-    this.app.get("/test-generate-activate-link", RouteController.testGenerateActivationLink);
+    this.app.get("/test-mail", AuthController.testMail);
+    this.app.get("/test-generate-activate-link", AuthController.testGenerateActivationLink);
   }
 
   private static async getCaptchaImage(req: Request, res: Response) {
