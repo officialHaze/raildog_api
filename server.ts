@@ -5,17 +5,13 @@ import Scrapper from "./util/ScrappingRelated/Scrapper";
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
 import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
-import WebSocket, { OPEN, WebSocketServer } from "ws";
-import http from "http";
-import Logger from "./util/Logger";
-import fs from "fs";
 import path from "path";
+import DB from "./util/DatabaseRelated/Database";
+import RouteController from "./util/Controllers/RouteController";
 
 class RailDog {
   private static app = express();
-  private static server = http.createServer(this.app);
   private static PORT = 5050;
-  private static logger = new Logger();
 
   public static main(args?: string[]): void {
     dotenv.config();
@@ -23,35 +19,26 @@ class RailDog {
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
-    this.server.listen(this.PORT, () => {
-      console.log(`Server running on port: ${this.PORT}`);
+    this.app.listen(this.PORT, async () => {
+      try {
+        console.log(`Server running on port: ${this.PORT}`);
+        // Connect to mongoDB
+        const db = new DB();
+        await db.connect();
+      } catch (err) {
+        console.error(err);
+      }
     });
 
     this.app.post("/get_live_status", this.getLiveStatus);
     this.app.post("/bypass_captcha", this.bypassCaptcha);
     this.app.post("/get_trains", this.findTrains);
     this.app.post("/get_captcha_image", this.getCaptchaImage);
+    this.app.post("/register", RouteController.userRegistration);
 
-    // //Websocket server
-    // const wss = new WebSocketServer({ server: this.server });
-
-    // this.logger.start();
-    // wss.on("connection", ws => {
-    //   this.logger.log("New client connection to WSS");
-
-    //   ws.on("message", (data, isBinary) => {
-    //     this.logger.log("Received: " + data.toString("utf-8"));
-    //     this.logger.log("Emitting to all clients...");
-    //     wss.clients.forEach(client => {
-    //       if (client.readyState === OPEN) {
-    //         client.send(data.toString("utf-8"));
-    //         this.logger.log("Data emitted..closing connection to this client!");
-    //         client.close();
-    //       }
-    //     });
-    //     this.logger.end();
-    //   });
-    // });
+    // TEST ROUTES
+    this.app.get("/test-mail", RouteController.testMail);
+    this.app.get("/test-generate-activate-link", RouteController.testGenerateActivationLink);
   }
 
   private static async getCaptchaImage(req: Request, res: Response) {
@@ -97,7 +84,7 @@ class RailDog {
       const scrapper = new Scrapper();
       const method = 1; // Use legacy request ping technique with axios
 
-      const [sD, phpsessid, options, captchafilename, data] = await scrapper.scrapLiveStatus(
+      const [sD, phpsessid, options, captchaDataUrl, data] = await scrapper.scrapLiveStatus(
         method,
         {
           phpsessid: phpsessid_,
@@ -110,10 +97,10 @@ class RailDog {
 
       await scrapper.closeBrowser(); // Only plausible when method is 0
 
-      if (sD && phpsessid && options && captchafilename)
+      if (sD && phpsessid && options && captchaDataUrl)
         res
           .status(403)
-          .json({ message: { sD, phpsessid, captchaOptions: options, captchafilename } });
+          .json({ message: { sD, phpsessid, captchaOptions: options, captchaDataUrl } });
       else if (data) res.status(200).json({ message: "success!", live_status: data });
       else res.status(400).json({ Error: "Bad request" });
     } catch (err) {
