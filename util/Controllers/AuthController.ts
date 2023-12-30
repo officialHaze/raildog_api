@@ -1,15 +1,17 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import UserData from "../Interfaces/UserData";
-import Validator from "../Validator";
+import Validator from "../Classes/Validator";
 import User from "../DatabaseRelated/Models/User";
 import DB from "../DatabaseRelated/Database";
 import Mailer from "../Classes/Mailer";
 import activateAccountTemplateJson from "../Json/emailTemplates.json";
 import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import mongoose from "mongoose";
 import LoginData from "../Interfaces/LoginData";
+import Cookie from "../Classes/Cookie";
+import express from "express";
 
 export default class AuthController {
   public static async userRegistration(req: Request, res: Response) {
@@ -114,36 +116,25 @@ export default class AuthController {
   }
 
   // Account activation
-  public static activateAccount(req: Request, res: Response) {
+  public static async activateAccount(req: Request, res: Response) {
     try {
-      // Validate the activation token(jwt)
-      const secret = process.env.SECRET_SIGN;
-      if (!secret) throw new Error("Secret key to validate jwt is missing!");
+      const uid: mongoose.Types.ObjectId = req.decodedUserId;
 
-      const activationToken = req.params.activationToken;
-      jwt.verify(activationToken, secret, async (err, decoded) => {
-        if (err) {
-          console.error("JWT verification error: ", err);
+      const user = await DB.findUserById(uid);
+      if (!user) {
+        res.status(400).json({ Error: "User is not registered!" });
+        return;
+      }
 
-          // Check the error type
-          const isExpired = err.message.includes("expired");
-          const isInvalid = err.message.includes("invalid");
+      const isVerified = user.is_verified;
+      if (isVerified) {
+        res.status(400).json({ Error: "User is already verified!" });
+        return;
+      }
 
-          isExpired && res.status(400).json({ Error: "Verification token expired!" });
-          isInvalid && res.status(403).json({ Error: "Token is invalid!" });
-          !isExpired && !isInvalid && res.status(400).json({ Error: "Token verification error" });
-          return;
-        }
+      await DB.verifyUser(uid);
 
-        if (!decoded) throw new Error("Token cannot be decoded!").message;
-        console.log("Decoded: ", decoded);
-
-        const uid: mongoose.Types.ObjectId = typeof decoded === "string" ? decoded : decoded.data;
-
-        await DB.verifyUser(uid);
-
-        res.status(200).json({ message: "User verified!" });
-      });
+      res.status(200).json({ message: "User verified!" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ Error: "Server error!" });
@@ -165,7 +156,7 @@ export default class AuthController {
       // Check if user is verified
       const isVerified = user.is_verified;
       if (!isVerified) {
-        res.status(402).json({ Error: "User is not verified!" });
+        res.status(403).json({ Error: "User is not verified!" });
         return;
       }
 
@@ -187,6 +178,37 @@ export default class AuthController {
       res.status(200).json({ access_token: accessToken, refresh_token: refreshToken });
     } catch (error) {
       console.error(error);
+      res.status(500).json({ Error: "Server error!" });
+    }
+  }
+
+  public static async assignAPIKey(req: Request, res: Response) {
+    try {
+      const uid: mongoose.Types.ObjectId = req.decodedUserId;
+
+      // const user = await DB.findUserById(uid);
+      // if (!user) {
+      //   res.status(400).json({ Error: "User is not registered!" });
+      //   return;
+      // }
+
+      // const isVerified = user.is_verified;
+      // if (!isVerified) {
+      //   res.status(403).json({ Error: "User is not verified!" });
+      //   return;
+      // }
+
+      // Generate API key
+      const apiKey = Generator.generateAPIKey();
+      await DB.assignAPIKey(uid, apiKey);
+
+      res.status(201).json({ api_key: apiKey });
+    } catch (error: any) {
+      console.error(error);
+      if (error.includes("limit reached")) {
+        res.status(401).json({ Error: error });
+        return;
+      }
       res.status(500).json({ Error: "Server error!" });
     }
   }

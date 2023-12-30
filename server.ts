@@ -8,6 +8,17 @@ import LiveStatusArgs from "./util/Interfaces/LiveStatusArgs";
 import path from "path";
 import DB from "./util/DatabaseRelated/Database";
 import AuthController from "./util/Controllers/AuthController";
+import Middleware from "./util/Classes/Middleware";
+import Handler from "./util/Classes/Handler";
+import mongoose from "mongoose";
+
+declare global {
+  namespace Express {
+    interface Request {
+      decodedUserId: mongoose.Types.ObjectId;
+    }
+  }
+}
 
 class RailDog {
   private static app = express();
@@ -37,8 +48,17 @@ class RailDog {
 
     // Auth related routes
     this.app.post("/register", AuthController.userRegistration);
-    this.app.get("/activate/:activationToken", AuthController.activateAccount);
     this.app.post("/login", AuthController.login);
+
+    // Activation token middleware with account activation route
+    this.app.use(Middleware.validateActivationToken);
+    this.app.use(Handler.handleTokenVerificationError);
+    this.app.get("/activate/:activationToken", AuthController.activateAccount);
+
+    // Routes with token verification middleware
+    this.app.use(Middleware.validateToken);
+    this.app.use(Handler.handleTokenVerificationError);
+    this.app.post("/generate_api_key", AuthController.assignAPIKey);
 
     // TEST ROUTES
     this.app.get("/test-mail", AuthController.testMail);

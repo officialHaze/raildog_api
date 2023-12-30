@@ -3,10 +3,6 @@ import mongoose from "mongoose";
 
 export default class Generator {
   private jwtSecretSign = process.env.SECRET_SIGN ?? "";
-  constructor() {
-    if (!this.jwtSecretSign) throw new Error("JWT Secret sign is missing in env!").message;
-  }
-
   private static alphabets = [
     "a",
     "b",
@@ -36,21 +32,30 @@ export default class Generator {
     "z",
   ];
   private static integers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  public generateAPIKey(): string {
-    // Generate a unique API key and return the result
-    const set = [...Generator.alphabets, ...Generator.integers];
-    const setLength = set.length;
-    const apiKeyLength = 30; // Number of chars
-    let apikey = "";
-    let i = 0;
-    while (i < apiKeyLength) {
-      const randNum = Math.floor(Math.random() * (setLength - 1));
-      console.log("Random num: ", randNum);
-      const randChar = set[randNum];
-      apikey += randChar.toString();
-      i++;
+
+  constructor() {
+    if (!this.jwtSecretSign) throw new Error("JWT Secret sign is missing in env!").message;
+  }
+
+  public static generateAPIKey(): string {
+    try {
+      // Generate a unique API key and return the result
+      const set = [...Generator.alphabets, ...Generator.integers];
+      const setLength = set.length;
+      const apiKeyLength = 30; // Number of chars
+      let apikey = "";
+      let i = 0;
+      while (i < apiKeyLength) {
+        const randNum = Math.floor(Math.random() * (setLength - 1));
+        console.log("Random num: ", randNum);
+        const randChar = set[randNum];
+        apikey += randChar.toString();
+        i++;
+      }
+      return apikey;
+    } catch (err) {
+      throw err;
     }
-    return apikey;
   }
 
   public generateActivationLink(userId: mongoose.Types.ObjectId | string): string {
