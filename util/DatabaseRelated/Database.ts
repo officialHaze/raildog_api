@@ -116,7 +116,7 @@ export default class DB {
       const apiKeys = await APIKey.find({ user_id: uid });
       console.log("Previous API Keys: ", apiKeys.length);
 
-      if (apiKeys.length > 3) throw new Error("API keys limit reached!").message;
+      if (apiKeys.length > 3) throw { status: 400, message: "API keys limit reached!" };
 
       const apiKeyData: APIKeyData = {
         user_id: uid,
@@ -135,9 +135,8 @@ export default class DB {
     try {
       const doesAPIKeyExist = await APIKey.findOne({ api_key: apikey });
       console.log("API KEY EXISTS? ", doesAPIKeyExist);
-      if (!doesAPIKeyExist) throw new Error("Invalid API Key!");
-      else if (!doesAPIKeyExist.is_enabled)
-        throw new Error("The API Key you are using is disabled!");
+      if (!doesAPIKeyExist) throw { status: 400, message: "Invalid API key!" };
+      else if (!doesAPIKeyExist.is_enabled) throw { status: 400, message: "API key is disabled!" };
     } catch (error) {
       throw error;
     }

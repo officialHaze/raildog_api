@@ -4,237 +4,142 @@ import Validator from "../Classes/Validator";
 import User from "../DatabaseRelated/Models/User";
 import DB from "../DatabaseRelated/Database";
 import Mailer from "../Classes/Mailer";
-import activateAccountTemplateJson from "../Json/emailTemplates.json";
 import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
-import jwt, { JwtPayload } from "jsonwebtoken";
 import mongoose from "mongoose";
-import LoginData from "../Interfaces/LoginData";
-import Cookie from "../Classes/Cookie";
-import express from "express";
 
 export default class AuthController {
-  public static async userRegistration(req: Request, res: Response) {
-    try {
-      const userData: UserData = req.body;
-      console.log("User data for registration: ", userData);
+  public static async userRegistration(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const userData: UserData = req.body;
+        console.log("User data for registration: ", userData);
 
-      // Check if user already exists
-      const user = await User.findOne({ email: userData.email });
-      if (user) {
-        res.status(400).json({ Error: "User is already registered!" });
-        return;
-      }
+        // Check if user already exists
+        const user = await User.findOne({ email: userData.email });
+        if (user) return next({ status: 400, message: "User is already registered!" });
 
-      // Validate the user data
-      const isValidEmail = Validator.validateEmail(userData.email);
-      console.log("Email is valid? ", isValidEmail);
+        // Validate the user data
+        const isValidEmail = Validator.validateEmail(userData.email);
+        console.log("Email is valid? ", isValidEmail);
 
-      const isValidPhone = Validator.validatePhone(userData.phone);
-      console.log("Is valid phone number? ", isValidPhone);
+        const isValidPhone = Validator.validatePhone(userData.phone);
+        console.log("Is valid phone number? ", isValidPhone);
 
-      if (!isValidEmail) {
-        res.status(400).json({ Error: "Invalid email!" });
-        return;
-      }
+        if (!isValidEmail) return next({ status: 400, message: "Invalid email!" });
 
-      if (!isValidPhone) {
-        res.status(400).json({ Error: "Invalid phone number!" });
-        return;
-      }
+        if (!isValidPhone) return next({ status: 400, message: "Invalid phone number!" });
 
-      if (!userData.role) {
-        res.status(400).json({ Error: "No role provided!" });
-        return;
-      }
+        if (!userData.role) return next({ status: 400, message: "No role provided!" });
 
-      if (!userData.password) {
-        res.status(400).json({ Error: "Please provide a strong password!" });
-        return;
-      }
+        if (!userData.password) return next({ status: 400, message: "Provide a strong password!" });
 
-      if (userData.username.length > 20) {
-        res.status(400).json({ Error: "Username maximum length exceeded!" });
-        return;
-      }
+        if (userData.username.length > 20)
+          return next({ status: 400, message: "Username maximum length exceeded!" });
 
-      // Hash the password
-      const hasher = new Hasher(process.env.SALT_ROUNDS);
-      const hashed = await hasher.generateHash(userData.password);
+        // Hash the password
+        const hasher = new Hasher(process.env.SALT_ROUNDS);
+        const hashed = await hasher.generateHash(userData.password);
 
-      const formattedUserData: UserData = {
-        ...userData,
-        password: hashed,
-      }; // Updating the user data with hashed password
+        const formattedUserData: UserData = {
+          ...userData,
+          password: hashed,
+        }; // Updating the user data with hashed password
 
-      // Create the user / save in DB
-      const db = new DB();
-      const savedUser = await db.createUser(formattedUserData);
+        // Create the user / save in DB
+        const db = new DB();
+        const savedUser = await db.createUser(formattedUserData);
 
-      // Generate verification link
-      const generate = new Generator();
-      const link = generate.generateActivationLink(savedUser._id);
+        // Send verification mail
+        const mailer = new Mailer();
+        await mailer.sendVerificationMail(savedUser._id, userData.email);
 
-      // Send verification mail
-      const html = `
-      <div>
-        ${activateAccountTemplateJson.activateEmail}
-        <a href=${link}>Activation link</a>
-      </div>
-     `;
-      const mailer = new Mailer();
-      await mailer.sendMail({
-        to: userData.email,
-        subject: "Activate account",
-        html,
-      });
-
-      res.status(201).json({ message: "User created and verification email sent!" });
-    } catch (err: any) {
-      console.error(err);
-      if (err.message) {
-        // Check if duplication key error in DB
-        const isDuplicate = err.message.includes("duplicate");
-        if (isDuplicate) {
-          // Check for duplication type
-          const isduplicateUsername = err.message.includes("username");
-          const isDuplicatePhone = err.message.includes("phone");
-
-          isduplicateUsername && res.status(400).json({ Error: "This username is already taken." });
-          isDuplicatePhone &&
-            res.status(400).json({ Error: "This phone number is already taken!" });
-
-          !isDuplicatePhone &&
-            !isduplicateUsername &&
-            res.status(500).json({ Error: "Something went wrong try again later!" });
-
-          return;
-        }
-      }
-      res.status(500).json({ Error: "Server error!" });
-    }
+        res.status(201).json({ message: "User created and verification email sent!" });
+      })
+      .catch(next);
   }
 
   // Account activation
-  public static async activateAccount(req: Request, res: Response) {
-    try {
-      const uid: mongoose.Types.ObjectId = req.decodedUserId;
+  public static activateAccount(req: Request, res: Response, next: NextFunction) {
+    const uid: mongoose.Types.ObjectId = req.decodedUserId;
 
-      const user = await DB.findUserById(uid);
-      if (!user) {
-        res.status(400).json({ Error: "User is not registered!" });
-        return;
-      }
-
-      const isVerified = user.is_verified;
-      if (isVerified) {
-        res.status(400).json({ Error: "User is already verified!" });
-        return;
-      }
-
-      await DB.verifyUser(uid);
-
-      res.status(200).json({ message: "User verified!" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ Error: "Server error!" });
-    }
+    DB.verifyUser(uid)
+      .then(() => res.status(200).json({ message: "User verified!" }))
+      .catch(next);
   }
 
   // Login controller
-  public static async login(req: Request, res: Response) {
-    try {
-      const { username, password }: LoginData = req.body;
+  public static async login(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        // const { username, password }: LoginData = req.body;
+        const password: string = req.body.password;
+        const user = req.user;
+        const uid = req.decodedUserId;
 
-      // Check if user exists
-      const user = await DB.findUserByName(username);
-      if (!user) {
-        res.status(400).json({ Error: "User is not registered" });
-        return;
-      }
+        // Validate the password
+        const hashedPass = user.password;
+        const hasher = new Hasher(process.env.SALT_ROUNDS);
+        const isValidPass = await hasher.compareHash(password, hashedPass ?? "");
+        if (!isValidPass) return next({ status: 403, message: "Wrong password!" });
 
-      // Check if user is verified
-      const isVerified = user.is_verified;
-      if (!isVerified) {
-        res.status(403).json({ Error: "User is not verified!" });
-        return;
-      }
+        // Create access and refresh tokens
+        const generate = new Generator();
+        const accessToken = generate.generateToken(uid, process.env.ACCESS_TOKEN_EXPIRY);
+        const refreshToken = generate.generateToken(uid, process.env.REFRESH_TOKEN_EXPIRY);
 
-      // Validate the password
-      const hashedPass = user.password;
-      const hasher = new Hasher(process.env.SALT_ROUNDS);
-      const isValidPass = await hasher.compareHash(password, hashedPass ?? "");
-      if (!isValidPass) {
-        res.status(403).json({ Error: "Wrong password!" });
-        return;
-      }
-
-      // Create access and refresh tokens
-      const generate = new Generator();
-      const accessToken = generate.generateToken(user._id, process.env.ACCESS_TOKEN_EXPIRY);
-      const refreshToken = generate.generateToken(user._id, process.env.REFRESH_TOKEN_EXPIRY);
-
-      // Return access and refresh tokens
-      res.status(200).json({ access_token: accessToken, refresh_token: refreshToken });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ Error: "Server error!" });
-    }
+        // Return access and refresh tokens
+        return res.status(200).json({ access_token: accessToken, refresh_token: refreshToken });
+      })
+      .catch(next);
   }
 
-  public static async assignAPIKey(req: Request, res: Response) {
-    try {
-      const uid: mongoose.Types.ObjectId = req.decodedUserId;
+  public static assignAPIKey(req: Request, res: Response, next: NextFunction) {
+    const uid: mongoose.Types.ObjectId = req.decodedUserId;
 
-      // const user = await DB.findUserById(uid);
-      // if (!user) {
-      //   res.status(400).json({ Error: "User is not registered!" });
-      //   return;
-      // }
-
-      // const isVerified = user.is_verified;
-      // if (!isVerified) {
-      //   res.status(403).json({ Error: "User is not verified!" });
-      //   return;
-      // }
-
-      // Generate API key
-      const apiKey = Generator.generateAPIKey();
-      await DB.assignAPIKey(uid, apiKey);
-
-      res.status(201).json({ api_key: apiKey });
-    } catch (error: any) {
-      console.error(error);
-      if (error.includes("limit reached")) {
-        res.status(401).json({ Error: error });
-        return;
-      }
-      res.status(500).json({ Error: "Server error!" });
-    }
+    // Generate API key
+    const apiKey = Generator.generateAPIKey();
+    DB.assignAPIKey(uid, apiKey)
+      .then(() => res.status(201).json({ api_key: apiKey }))
+      .catch(next);
   }
 
   // Token refresh controller
-  public static async tokenRefresh(req: Request, res: Response) {
-    try {
-      const userId = req.decodedUserId;
+  public static async tokenRefresh(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(() => {
+        const userId = req.decodedUserId;
 
-      // Create new access and refresh token
-      const generate = new Generator();
-      const newAccessToken: string = generate.generateToken(
-        userId,
-        process.env.ACCESS_TOKEN_EXPIRY
-      );
-      const newRefreshToken: string = generate.generateToken(
-        userId,
-        process.env.REFRESH_TOKEN_EXPIRY
-      );
+        // Create new access and refresh token
+        const generate = new Generator();
+        const newAccessToken: string = generate.generateToken(
+          userId,
+          process.env.ACCESS_TOKEN_EXPIRY
+        );
+        const newRefreshToken: string = generate.generateToken(
+          userId,
+          process.env.REFRESH_TOKEN_EXPIRY
+        );
 
-      // Send new set of tokens as response
-      return res.status(201).json({ access_token: newAccessToken, refresh_token: newRefreshToken });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ Error: "Server error!" });
-    }
+        // Send new set of tokens as response
+        return res
+          .status(201)
+          .json({ access_token: newAccessToken, refresh_token: newRefreshToken });
+      })
+      .catch(next);
+  }
+
+  // Send / Resend verification email
+  public static sendVerificationEmail(req: Request, res: Response, next: NextFunction) {
+    const user = req.user;
+    const uid = req.decodedUserId;
+
+    // Send verification email to the user
+    const mailer = new Mailer();
+    mailer
+      .sendVerificationMail(uid, user.email)
+      .then(() => res.status(200).json({ message: "Verification Email sent!" }))
+      .catch(next);
   }
 
   // Test route for checking nodemailer

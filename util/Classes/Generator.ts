@@ -76,7 +76,7 @@ export default class Generator {
 
   public generateToken(uid: mongoose.Types.ObjectId | string, expiry: string | undefined) {
     try {
-      if (!expiry) throw new Error("Access token expiry time is missing!").message;
+      if (!expiry) throw new Error("Access token expiry time is missing!");
 
       const token = jwt.sign({ userId: uid }, this.jwtSecretSign, { expiresIn: expiry });
 
