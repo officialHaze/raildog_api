@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import dotenv from "dotenv";
 import DB from "./util/DatabaseRelated/Database";
 import AuthController from "./util/Controllers/AuthController";
@@ -25,6 +25,12 @@ class RailDog {
   public static main(args?: string[]): void {
     dotenv.config();
 
+    const corsOptions = {
+      origin: "http://localhost:3000",
+      credentials: true,
+      methods: ["GET", "POST"],
+    };
+
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
@@ -40,7 +46,8 @@ class RailDog {
     });
 
     // Auth related routes
-    this.app.post("/register", cors(), AuthController.userRegistration);
+    this.app.use("/register", cors(corsOptions));
+    this.app.post("/register", AuthController.userRegistration);
     this.app.use("/login", cors(), [Middleware.isUserRegistered, Middleware.isUserVerified]);
     this.app.post("/login", AuthController.login);
     this.app.use("/send_verification_email", cors(), [
