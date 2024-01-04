@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import dotenv from "dotenv";
 import DB from "./util/DatabaseRelated/Database";
 import AuthController from "./util/Controllers/AuthController";
@@ -7,6 +7,7 @@ import Handler from "./util/Classes/Handler";
 import mongoose from "mongoose";
 import APIRouteController from "./util/Controllers/APIRouteController";
 import UserData from "./util/Interfaces/UserData";
+import cors from "cors";
 
 declare global {
   namespace Express {
@@ -24,6 +25,12 @@ class RailDog {
   public static main(args?: string[]): void {
     dotenv.config();
 
+    const corsOptions = {
+      origin: "http://localhost:3000",
+      credentials: true,
+      methods: ["GET", "POST"],
+    };
+
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
@@ -39,10 +46,16 @@ class RailDog {
     });
 
     // Auth related routes
+    this.app.use("/register", cors(corsOptions));
     this.app.post("/register", AuthController.userRegistration);
-    this.app.use("/login", [Middleware.isUserRegistered, Middleware.isUserVerified]);
+
+    this.app.use("/login", cors(corsOptions), [
+      Middleware.isUserRegistered,
+      Middleware.isUserVerified,
+    ]);
     this.app.post("/login", AuthController.login);
-    this.app.use("/send_verification_email", [
+
+    this.app.use("/send_verification_email", cors(corsOptions), [
       Middleware.isUserRegistered,
       Middleware.isUserNotVerified,
     ]);
@@ -56,12 +69,12 @@ class RailDog {
     this.app.post("/api/get_captcha_image", APIRouteController.getCaptchaImage);
 
     // Refresh token route with middleware
-    this.app.use("/refresh_token", Middleware.validateRefreshToken);
+    this.app.use("/refresh_token", cors(), Middleware.validateRefreshToken);
     this.app.post("/refresh_token", AuthController.tokenRefresh);
     this.app.use("/refresh_token", Handler.handleTokenVerificationError);
 
     // Activation token middleware with account activation route
-    this.app.use("/activate/:activationToken", [
+    this.app.use("/activate/:activationToken", cors(), [
       Middleware.validateActivationToken,
       Middleware.isUserNotVerified,
     ]);
@@ -69,7 +82,7 @@ class RailDog {
     this.app.use("/activate/:activationToken", Handler.handleTokenVerificationError);
 
     // Routes with token verification middleware
-    this.app.use("/auth/*", Middleware.validateToken);
+    this.app.use("/auth/*", cors(), Middleware.validateToken);
     this.app.post("/auth/generate_api_key", AuthController.assignAPIKey);
     this.app.use("/auth/*", Handler.handleTokenVerificationError);
 
