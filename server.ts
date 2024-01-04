@@ -48,8 +48,13 @@ class RailDog {
     // Auth related routes
     this.app.use("/register", cors(corsOptions));
     this.app.post("/register", AuthController.userRegistration);
-    this.app.use("/login", cors(), [Middleware.isUserRegistered, Middleware.isUserVerified]);
+
+    this.app.use("/login", cors(corsOptions), [
+      Middleware.isUserRegistered,
+      Middleware.isUserVerified,
+    ]);
     this.app.post("/login", AuthController.login);
+
     this.app.use("/send_verification_email", cors(corsOptions), [
       Middleware.isUserRegistered,
       Middleware.isUserNotVerified,
