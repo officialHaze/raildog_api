@@ -93,7 +93,7 @@ export default class Middleware {
         user = await DB.findUserByEmail(usernameOrEmail);
       } else user = await DB.findUserByName(usernameOrEmail); // Find user by username
 
-      if (!user) return next({ status: 401, message: "User is not registered!" });
+      if (!user) return next({ status: 400, message: "User is not registered!" });
 
       req.user = user;
       req.decodedUserId = user._id;
@@ -107,7 +107,7 @@ export default class Middleware {
   public static isUserVerified(req: Request, res: Response, next: NextFunction) {
     const user = req.user;
     const isVerified = user.is_verified;
-    if (!isVerified) return next({ status: 400, message: "User is not verified!" });
+    if (!isVerified) return next({ status: 403, message: "User is not verified!" });
 
     next();
   }
