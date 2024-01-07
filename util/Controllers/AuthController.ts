@@ -7,6 +7,7 @@ import Mailer from "../Classes/Mailer";
 import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
 import mongoose from "mongoose";
+import APIKey from "../DatabaseRelated/Models/APIKey";
 
 export default class AuthController {
   public static async userRegistration(req: Request, res: Response, next: NextFunction) {
@@ -101,6 +102,16 @@ export default class AuthController {
     const apiKey = Generator.generateAPIKey();
     DB.assignAPIKey(uid, apiKey)
       .then(() => res.status(201).json({ api_key: apiKey }))
+      .catch(next);
+  }
+
+  public static async getAPIKeys(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const uid: mongoose.Types.ObjectId = req.decodedUserId;
+        const apikeys = await APIKey.find({ user_id: uid }, { api_key: true, is_enabled: true });
+        res.status(200).json({ message: "success!", api_keys: apikeys });
+      })
       .catch(next);
   }
 
