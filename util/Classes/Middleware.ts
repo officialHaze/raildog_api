@@ -8,7 +8,7 @@ export default class Middleware {
     Promise.resolve()
       .then(() => {
         const cookie = req.header("cookie");
-        if (!cookie) return next({ status: 403, message: "Authorization cookie is missing!" });
+        if (!cookie) return next({ status: 401, message: "Authorization cookie is missing!" });
 
         const accessToken = Cookie.retrieveCookieVal(cookie, "access_token");
         if (!accessToken) return next({ status: 401, message: "Unauthorized!" });
