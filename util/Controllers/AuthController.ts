@@ -7,6 +7,9 @@ import Mailer from "../Classes/Mailer";
 import Generator from "../Classes/Generator";
 import Hasher from "../Classes/Hasher";
 import mongoose from "mongoose";
+import APIKey from "../DatabaseRelated/Models/APIKey";
+import { Worker } from "worker_threads";
+import path from "path";
 
 export default class AuthController {
   public static async userRegistration(req: Request, res: Response, next: NextFunction) {
@@ -101,6 +104,85 @@ export default class AuthController {
     const apiKey = Generator.generateAPIKey();
     DB.assignAPIKey(uid, apiKey)
       .then(() => res.status(201).json({ api_key: apiKey }))
+      .catch(next);
+  }
+
+  public static async getAPIKeys(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const uid: mongoose.Types.ObjectId = req.decodedUserId;
+        const apikeys = await APIKey.find({ user_id: uid }, { api_key: true, is_enabled: true });
+        res.status(200).json({ message: "success!", api_keys: apikeys });
+      })
+      .catch(next);
+  }
+
+  public static async delAPIKeys(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const apikeysToDel: mongoose.Types.ObjectId[] = req.body.api_key_ids;
+
+        const delPromises = apikeysToDel.map(id => {
+          return new Promise((res, rej) => {
+            APIKey.findByIdAndDelete(id)
+              .then(() => res(""))
+              .catch(err => rej(err));
+          });
+        });
+
+        Promise.all(delPromises)
+          .then(() => res.status(200).json({ message: "success!" }))
+          .catch(next);
+      })
+      .catch(next);
+  }
+
+  public static async updateAPIKeys(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const apikeysToUpdate: mongoose.Types.ObjectId[] = req.body.api_key_ids;
+        const updateType: string = req.body.update_type; // Two types: Disable(to disable api keys), Enable(to enable api keys)
+
+        switch (updateType) {
+          case "disable":
+            const dpromises = apikeysToUpdate.map(id => {
+              return new Promise((res, rej) => {
+                APIKey.findByIdAndUpdate(id, { is_enabled: false }, { new: true })
+                  .then(updated => res(updated))
+                  .catch(err => rej(err));
+              });
+            });
+
+            Promise.all(dpromises)
+              .then(updated => {
+                console.log(updated);
+                res.status(200).json({ message: "success!" });
+              })
+              .catch(next);
+            break;
+
+          case "enable":
+            const epromises = apikeysToUpdate.map(id => {
+              return new Promise((res, rej) => {
+                APIKey.findByIdAndUpdate(id, { is_enabled: true }, { new: true })
+                  .then(updated => res(updated))
+                  .catch(err => rej(err));
+              });
+            });
+
+            Promise.all(epromises)
+              .then(updated => {
+                console.log(updated);
+                res.status(200).json({ message: "success!" });
+              })
+              .catch(next);
+            break;
+
+          default:
+            next({ status: 400, message: "Update type not provided!" });
+            break;
+        }
+      })
       .catch(next);
   }
 

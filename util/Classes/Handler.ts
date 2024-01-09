@@ -12,8 +12,8 @@ export default class Handler {
     const isExpired = err.message.includes("expired");
     const isInvalid = err.message.includes("invalid");
 
-    isExpired && res.status(400).json({ Error: "Verification token expired!" });
-    isInvalid && res.status(403).json({ Error: "Token is invalid!" });
+    isExpired && res.status(401).json({ Error: "Verification token expired!" });
+    isInvalid && res.status(401).json({ Error: "Token is invalid!" });
     !isExpired && !isInvalid && next(err);
   }
 
