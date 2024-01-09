@@ -101,6 +101,15 @@ export default class DB {
     }
   }
 
+  public static async findUserByEmail(email: string) {
+    try {
+      const user = await User.findOne({ email });
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   public static async findUserById(uid: mongoose.Types.ObjectId) {
     try {
       const user = await User.findById(uid);

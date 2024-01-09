@@ -83,11 +83,17 @@ export default class Middleware {
 
   public static async isUserRegistered(req: Request, res: Response, next: NextFunction) {
     try {
-      const username: string = req.body.username;
-      if (!username) return next({ status: 400, message: "Username is missing!" });
+      const usernameOrEmail: string = req.body.username_or_email;
+      if (!usernameOrEmail) return next({ status: 400, message: "Username is missing!" });
 
-      const user = await DB.findUserByName(username);
-      if (!user) return next({ status: 403, message: "User is not registered!" });
+      // Check if user has sent email
+      let user: any | null = null;
+      if (usernameOrEmail.includes("@")) {
+        // Find user by email
+        user = await DB.findUserByEmail(usernameOrEmail);
+      } else user = await DB.findUserByName(usernameOrEmail); // Find user by username
+
+      if (!user) return next({ status: 400, message: "User is not registered!" });
 
       req.user = user;
       req.decodedUserId = user._id;
@@ -101,7 +107,7 @@ export default class Middleware {
   public static isUserVerified(req: Request, res: Response, next: NextFunction) {
     const user = req.user;
     const isVerified = user.is_verified;
-    if (!isVerified) return next({ status: 400, message: "User is not verified!" });
+    if (!isVerified) return next({ status: 403, message: "User is not verified!" });
 
     next();
   }

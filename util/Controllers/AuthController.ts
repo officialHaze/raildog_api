@@ -81,7 +81,7 @@ export default class AuthController {
         const hashedPass = user.password;
         const hasher = new Hasher(process.env.SALT_ROUNDS);
         const isValidPass = await hasher.compareHash(password, hashedPass ?? "");
-        if (!isValidPass) return next({ status: 403, message: "Wrong password!" });
+        if (!isValidPass) return next({ status: 400, message: "Wrong password!" });
 
         // Create access and refresh tokens
         const generate = new Generator();
