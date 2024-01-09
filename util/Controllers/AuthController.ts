@@ -137,6 +137,55 @@ export default class AuthController {
       .catch(next);
   }
 
+  public static async updateAPIKeys(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const apikeysToUpdate: mongoose.Types.ObjectId[] = req.body.api_key_ids;
+        const updateType: string = req.body.update_type; // Two types: Disable(to disable api keys), Enable(to enable api keys)
+
+        switch (updateType) {
+          case "disable":
+            const dpromises = apikeysToUpdate.map(id => {
+              return new Promise((res, rej) => {
+                APIKey.findByIdAndUpdate(id, { is_enabled: false }, { new: true })
+                  .then(updated => res(updated))
+                  .catch(err => rej(err));
+              });
+            });
+
+            Promise.all(dpromises)
+              .then(updated => {
+                console.log(updated);
+                res.status(200).json({ message: "success!" });
+              })
+              .catch(next);
+            break;
+
+          case "enable":
+            const epromises = apikeysToUpdate.map(id => {
+              return new Promise((res, rej) => {
+                APIKey.findByIdAndUpdate(id, { is_enabled: true }, { new: true })
+                  .then(updated => res(updated))
+                  .catch(err => rej(err));
+              });
+            });
+
+            Promise.all(epromises)
+              .then(updated => {
+                console.log(updated);
+                res.status(200).json({ message: "success!" });
+              })
+              .catch(next);
+            break;
+
+          default:
+            next({ status: 400, message: "Update type not provided!" });
+            break;
+        }
+      })
+      .catch(next);
+  }
+
   // Token refresh controller
   public static async tokenRefresh(req: Request, res: Response, next: NextFunction) {
     Promise.resolve()

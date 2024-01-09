@@ -85,7 +85,9 @@ class RailDog {
     this.app.use("/auth/*", cors(corsOptions), Middleware.validateToken);
     this.app.get("/auth/generate_api_key", AuthController.assignAPIKey);
     this.app.get("/auth/get_api_keys", AuthController.getAPIKeys);
+    this.app.put("/auth/update_api_keys", AuthController.updateAPIKeys);
     this.app.delete("/auth/delete_api_keys", AuthController.delAPIKeys);
+
     this.app.use("/auth/*", Handler.handleTokenVerificationError);
 
     // TEST ROUTES
