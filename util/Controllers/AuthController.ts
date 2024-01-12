@@ -103,7 +103,7 @@ export default class AuthController {
     // Generate API key
     const apiKey = Generator.generateAPIKey();
     DB.assignAPIKey(uid, apiKey)
-      .then(() => res.status(201).json({ api_key: apiKey }))
+      .then(({ _id, api_key, is_enabled }) => res.status(201).json({ _id, api_key, is_enabled }))
       .catch(next);
   }
 

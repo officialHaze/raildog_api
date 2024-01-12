@@ -135,6 +135,8 @@ export default class DB {
       const newApiKey = new APIKey(apiKeyData);
       const saved = await newApiKey.save();
       console.log("API key created: ", saved);
+      const { _id, api_key, is_enabled } = saved;
+      return { _id, api_key, is_enabled };
     } catch (error) {
       throw error;
     }
