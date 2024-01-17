@@ -31,6 +31,14 @@ class RailDog {
       methods: ["GET", "POST", "PUT", "DELETE"],
     };
 
+    const globalCorsOptions = {
+      origin: (origin: any, cb: any) => {
+        cb(null, true);
+      },
+      credentials: true,
+      methods: ["GET", "POST"],
+    };
+
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
 
@@ -62,6 +70,7 @@ class RailDog {
     this.app.post("/send_verification_email", AuthController.sendVerificationEmail);
 
     // Train status API related routes that require API key validation
+    this.app.use("/api/", cors(globalCorsOptions));
     this.app.use("/api/*", Middleware.validateAPIKey);
     this.app.post("/api/get_trains", APIRouteController.findTrains);
     this.app.post("/api/get_live_status", APIRouteController.getLiveStatus);
