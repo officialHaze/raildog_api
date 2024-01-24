@@ -224,6 +224,23 @@ export default class AuthController {
       .catch(next);
   }
 
+  // Get user details
+  public static getUserDetails(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(() => {
+        const user = req.user;
+        console.log("User: ", user);
+        const userDetailsToSend = {
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        };
+        res.status(200).json({ message: "Success!", user_details: userDetailsToSend });
+      })
+      .catch(next);
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {

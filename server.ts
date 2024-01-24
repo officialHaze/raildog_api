@@ -96,7 +96,7 @@ class RailDog {
     this.app.get("/auth/get_api_keys", AuthController.getAPIKeys);
     this.app.put("/auth/update_api_keys", AuthController.updateAPIKeys);
     this.app.delete("/auth/delete_api_keys", AuthController.delAPIKeys);
-
+    this.app.get("/auth/get_user_details", AuthController.getUserDetails);
     this.app.use("/auth/*", Handler.handleTokenVerificationError);
 
     // TEST ROUTES
