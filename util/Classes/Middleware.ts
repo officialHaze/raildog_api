@@ -6,7 +6,7 @@ import DB from "../DatabaseRelated/Database";
 export default class Middleware {
   public static async validateToken(req: Request, res: Response, next: NextFunction) {
     Promise.resolve()
-      .then(() => {
+      .then(async () => {
         const cookie = req.header("cookie");
         if (!cookie) return next({ status: 401, message: "Authorization cookie is missing!" });
 
@@ -16,7 +16,12 @@ export default class Middleware {
         const decoded = Validator.tokenValidator(accessToken);
         if (!decoded) throw new Error("No decoded value found!");
 
-        req.decodedUserId = typeof decoded !== "string" ? decoded.userId : decoded;
+        const userId = typeof decoded !== "string" ? decoded.userId : decoded;
+        const user = await DB.findUserById(userId);
+        if (!user) return next({ status: 400, message: "User is not registered!" });
+
+        req.user = user;
+        req.decodedUserId = userId;
 
         next();
       })
