@@ -89,7 +89,7 @@ export default class Middleware {
   public static async isUserRegistered(req: Request, res: Response, next: NextFunction) {
     try {
       const usernameOrEmail: string = req.body.username_or_email;
-      if (!usernameOrEmail) return next({ status: 400, message: "Username is missing!" });
+      if (!usernameOrEmail) return next({ status: 400, message: "Username or Email is missing!" });
 
       // Check if user has sent email
       let user: any | null = null;

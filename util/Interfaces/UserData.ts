@@ -7,6 +7,6 @@ export default interface UserData {
   password?: string | null;
   role: string;
   is_verified: boolean;
-  verification_code?: number | null;
+  verification_code?: string | null;
   business_name?: string | null;
 }

@@ -85,4 +85,25 @@ export default class Generator {
       throw error;
     }
   }
+
+  public generateVerificationCode(): string {
+    try {
+      // Generate a unique verification code key and return the result
+      const set = [...Generator.alphabets, ...Generator.integers];
+      const setLength = set.length;
+      const codeLength = 6; // Number of chars
+      let code = "";
+      let i = 0;
+      while (i < codeLength) {
+        const randNum = Math.floor(Math.random() * (setLength - 1));
+        console.log("Random num: ", randNum);
+        const randChar = set[randNum];
+        code += randChar.toString();
+        i++;
+      }
+      return code.toUpperCase();
+    } catch (err) {
+      throw err;
+    }
+  }
 }

@@ -69,6 +69,11 @@ class RailDog {
     ]);
     this.app.post("/send_verification_email", AuthController.sendVerificationEmail);
 
+    // API to handle sending verification code to users.
+    // This API will be mainly linked to the forgot password API
+    this.app.use("/send_verification_code", cors(corsOptions), Middleware.isUserRegistered);
+    this.app.post("/send_verification_code", AuthController.sendVerificationCode);
+
     // Train status API related routes that require API key validation
     this.app.use("/api/", cors(globalCorsOptions));
     this.app.use("/api/*", Middleware.validateAPIKey);

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 import Admin from "./Models/Admin";
 import UserData from "../Interfaces/UserData";
 import masterAdminData from "../../masterAdminData";
@@ -150,6 +150,19 @@ export default class DB {
       else if (!doesAPIKeyExist.is_enabled) throw { status: 400, message: "API key is disabled!" };
     } catch (error) {
       throw error;
+    }
+  }
+
+  public static async deleteVerificationCode(uid: mongoose.Types.ObjectId): Promise<void> {
+    try {
+      const updatedUser = await User.findByIdAndUpdate(
+        uid,
+        { verification_code: null },
+        { new: true }
+      );
+      console.log("Updated user: ", updatedUser);
+    } catch (err) {
+      throw err;
     }
   }
 }

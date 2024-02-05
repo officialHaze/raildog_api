@@ -241,6 +241,49 @@ export default class AuthController {
       .catch(next);
   }
 
+  // Send verification code
+  public static sendVerificationCode(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const user = req.user;
+        const uid = req.decodedUserId;
+        console.log("Email: ", user.email);
+
+        // Generate a verification code
+        const generator = new Generator();
+        const code = generator.generateVerificationCode();
+
+        // Bind the verification code to current user
+        console.log("Initial user: ", user);
+        let updatedUser = await User.findByIdAndUpdate(
+          uid,
+          { verification_code: code },
+          { new: true }
+        );
+        console.log("Updated user: ", updatedUser);
+
+        // Delete the verification code after
+        // a certain time.
+        // setTimeout(DB.deleteVerificationCode, 5000);
+
+        // Call the mailer class to send an email to
+        // user's email id containing the verification code.
+        const mailer = new Mailer();
+        const to = user.email;
+        const subject = "Verification code for resetting password";
+        const html = `Verification code: ${code}`;
+        await mailer.sendMail({
+          to,
+          html,
+          subject,
+        });
+
+        // Send a 200 response once the email is dispatched.
+        res.status(200).json({ message: "Success!" });
+      })
+      .catch(next);
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {
