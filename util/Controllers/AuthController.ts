@@ -262,12 +262,16 @@ export default class AuthController {
         );
         console.log("Updated user: ", updatedUser);
 
-        // Delete the verification code after
-        // a certain time.
-        // setTimeout(DB.deleteVerificationCode, 5000);
+        // Expire the verification code after
+        // a certain time by updating its value to null.
+        const expireInSecs = process.env.EXPIRE_VERIFICATION_CODE_IN_SECONDS;
+        // If the expiry time is not present
+        // throw an error.
+        if (!expireInSecs) throw new Error("Verification code expiry time not found in env file");
+        DB.expireVerificationCode(uid, parseInt(expireInSecs));
 
         // Call the mailer class to send an email to
-        // user's email id containing the verification code.
+        // user's email with the verification code.
         const mailer = new Mailer();
         const to = user.email;
         const subject = "Verification code for resetting password";

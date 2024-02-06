@@ -153,14 +153,19 @@ export default class DB {
     }
   }
 
-  public static async deleteVerificationCode(uid: mongoose.Types.ObjectId): Promise<void> {
+  public static async expireVerificationCode(
+    uid: mongoose.Types.ObjectId,
+    expireIn: number
+  ): Promise<void> {
     try {
-      const updatedUser = await User.findByIdAndUpdate(
-        uid,
-        { verification_code: null },
-        { new: true }
-      );
-      console.log("Updated user: ", updatedUser);
+      setTimeout(async () => {
+        const updatedUser = await User.findByIdAndUpdate(
+          uid,
+          { verification_code: null },
+          { new: true }
+        );
+        console.log("Updated user: ", updatedUser);
+      }, expireIn);
     } catch (err) {
       throw err;
     }
