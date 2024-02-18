@@ -62,6 +62,7 @@ export default class Mailer {
       }
     });
   }
+
   public async sendMail({ to, html, subject }: { to: string; html: string; subject: string }) {
     try {
       const ACCESS_TOKEN = await this.authorize();

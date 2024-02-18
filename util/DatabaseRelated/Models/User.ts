@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
     },
     verification_code: {
-      type: Number,
+      type: String,
     },
   },
   {

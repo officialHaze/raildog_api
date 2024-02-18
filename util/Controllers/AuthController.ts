@@ -241,6 +241,76 @@ export default class AuthController {
       .catch(next);
   }
 
+  // Send verification code
+  public static sendVerificationCode(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const user = req.user;
+        const uid = req.decodedUserId;
+        console.log("Email: ", user.email);
+
+        // Generate a verification code
+        const generator = new Generator();
+        const code = generator.generateVerificationCode();
+
+        // Bind the verification code to current user
+        console.log("Initial user: ", user);
+        let updatedUser = await User.findByIdAndUpdate(
+          uid,
+          { verification_code: code },
+          { new: true }
+        );
+        console.log("Updated user: ", updatedUser);
+
+        // Expire the verification code after
+        // a certain time by updating its value to null.
+        const expireInSecs = process.env.EXPIRE_VERIFICATION_CODE_IN_SECONDS;
+        // If the expiry time is not present
+        // throw an error.
+        if (!expireInSecs) throw new Error("Verification code expiry time not found in env file");
+        DB.expireVerificationCode(uid, parseInt(expireInSecs));
+
+        // Call the mailer class to send an email to
+        // user's email with the verification code.
+        const mailer = new Mailer();
+        const to = user.email;
+        const subject = "Verification code for resetting password";
+        const html = `Verification code: ${code}`;
+        await mailer.sendMail({
+          to,
+          html,
+          subject,
+        });
+
+        // Send a 200 response once the email is dispatched.
+        res.status(200).json({ message: "Success!" });
+      })
+      .catch(next);
+  }
+
+  // Handle request for password reset
+  public static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const newPassword = req.body.new_password;
+        const uid = req.decodedUserId;
+
+        // Validate the new password
+        if (!newPassword)
+          return next({ status: 400, message: "Please provide a valid and strong password!" });
+
+        // Hash the password
+        const hasher = new Hasher(process.env.SALT_ROUNDS);
+        const hashed = await hasher.generateHash(newPassword);
+
+        await User.findByIdAndUpdate(uid, { password: hashed });
+        // console.log("User with new password: ", userWithNewPassword);
+
+        res.status(200).json({ message: "Password successfully reset!" });
+      })
+      .catch(next);
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {
