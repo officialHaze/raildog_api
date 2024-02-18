@@ -86,6 +86,19 @@ export default class Middleware {
       .catch(next);
   }
 
+  public static validateVerificationCode(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(() => {
+        const verificationCode: string = req.body.verification_code;
+
+        const user = req.user;
+        if (user.verification_code === verificationCode) return next();
+
+        return next({ status: 400, message: "Invalid or empty verification code provided!" });
+      })
+      .catch(next);
+  }
+
   public static async isUserRegistered(req: Request, res: Response, next: NextFunction) {
     try {
       const usernameOrEmail: string = req.body.username_or_email;

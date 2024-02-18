@@ -288,6 +288,29 @@ export default class AuthController {
       .catch(next);
   }
 
+  // Handle request for password reset
+  public static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    Promise.resolve()
+      .then(async () => {
+        const newPassword = req.body.new_password;
+        const uid = req.decodedUserId;
+
+        // Validate the new password
+        if (!newPassword)
+          return next({ status: 400, message: "Please provide a valid and strong password!" });
+
+        // Hash the password
+        const hasher = new Hasher(process.env.SALT_ROUNDS);
+        const hashed = await hasher.generateHash(newPassword);
+
+        await User.findByIdAndUpdate(uid, { password: hashed });
+        // console.log("User with new password: ", userWithNewPassword);
+
+        res.status(200).json({ message: "Password successfully reset!" });
+      })
+      .catch(next);
+  }
+
   // Test route for checking nodemailer
   public static async testMail(req: Request, res: Response) {
     try {
