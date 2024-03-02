@@ -165,7 +165,7 @@ export default class DB {
           { new: true }
         );
         console.log("Updated user: ", updatedUser);
-      }, expireIn);
+      }, expireIn * 1000);
     } catch (err) {
       throw err;
     }
